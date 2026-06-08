@@ -209,7 +209,7 @@
       </div>
       <div class="chart-scroll-wrap" id="chartScrollWrap-gold">
         <div class="chart-scroll-inner" id="chartScrollInner-gold">
-          <div style="position:relative;height:160px" id="chartContainer-gold">
+          <div style="position:relative;height:320px" id="chartContainer-gold">
             <canvas id="chart-gold"></canvas>
           </div>
         </div>
@@ -223,7 +223,7 @@
       </div>
       <div class="chart-scroll-wrap" id="chartScrollWrap-plat">
         <div class="chart-scroll-inner" id="chartScrollInner-plat">
-          <div style="position:relative;height:160px" id="chartContainer-plat">
+          <div style="position:relative;height:320px" id="chartContainer-plat">
             <canvas id="chart-plat"></canvas>
           </div>
         </div>
@@ -237,7 +237,7 @@
       </div>
       <div class="chart-scroll-wrap" id="chartScrollWrap-silv">
         <div class="chart-scroll-inner" id="chartScrollInner-silv">
-          <div style="position:relative;height:160px" id="chartContainer-silv">
+          <div style="position:relative;height:320px" id="chartContainer-silv">
             <canvas id="chart-silv"></canvas>
           </div>
         </div>
@@ -389,13 +389,13 @@ async function fetchJPY() {
 }
 
 // Try multiple free metal price APIs that allow browser access
-async function fetchMetalPrices() {
+async function fetchMetalPrices(signal) {
   // Primary: open.er-api.com has metals
   // Try goldprice.org open endpoint
   try {
     const [fxRes, metalsRes] = await Promise.all([
-      fetch('https://api.frankfurter.app/latest?from=USD&to=JPY'),
-      fetch('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD')
+      fetch('https://api.frankfurter.app/latest?from=USD&to=JPY', {signal}),
+      fetch('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD', {signal})
     ]);
     const fxData = await fxRes.json();
     const jpy = fxData.rates?.JPY || 145;
@@ -406,8 +406,8 @@ async function fetchMetalPrices() {
       if (auUsd && auUsd > 1000) {
         // Get silver and platinum via another call
         const [ptRes, agRes] = await Promise.all([
-          fetch('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XPT/USD'),
-          fetch('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAG/USD')
+          fetch('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XPT/USD', {signal}),
+          fetch('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAG/USD', {signal})
         ]);
         const ptData = ptRes.ok ? await ptRes.json() : null;
         const agData = agRes.ok ? await agRes.json() : null;
@@ -425,7 +425,7 @@ async function fetchMetalPrices() {
 
   // Fallback 2: use open.exchangerate-api.com for metals
   try {
-    const r = await fetch('https://open.er-api.com/v6/latest/XAU');
+    const r = await fetch('https://open.er-api.com/v6/latest/XAU', {signal});
     const d = await r.json();
     if (d.rates?.JPY) {
       const goldJpyPerOzt = d.rates.JPY;
@@ -448,68 +448,25 @@ async function fetchMetalPrices() {
   return null;
 }
 
-async function loadPrices() {
-  try {
-    const result = await fetchMetalPrices();
-    if (result && result.gold > 15000) {
-      S.prev = {...S.prices};
-      S.prices.gold = result.gold;
-      S.prices.plat = result.plat || S.prices.plat;
-      S.prices.silv = result.silv || S.prices.silv;
-      S.isLive = true;
-      // Cache successful fetch
-      localStorage.setItem('cachedPrices', JSON.stringify({...S.prices, ts: Date.now()}));
-      return true;
-    }
-  } catch(e) {}
-
-  // Use cached prices if available
-  const cached = JSON.parse(localStorage.getItem('cachedPrices') || 'null');
-  if (cached && cached.gold > 15000) {
-    S.prev = {...S.prices};
-    S.prices.gold = cached.gold;
-    S.prices.plat = cached.plat;
-    S.prices.silv = cached.silv;
-    S.isLive = false;
-    return false;
-  }
-
-  // Last resort: realistic reference values
-  S.prev = {...S.prices};
-  // Use end of seed arrays as "today"
-  S.prices.gold = S.prices.gold || SEED_GOLD[SEED_GOLD.length-1];
-  S.prices.plat = S.prices.plat || SEED_PLAT[SEED_PLAT.length-1];
-  S.prices.silv = S.prices.silv || SEED_SILV[SEED_SILV.length-1];
-  S.isLive = false;
-  return false;
-}
-
 /* ===== Build history: weekly (1M) or monthly (6M/1Y) ===== */
 function buildHistory() {
   const now = new Date();
   const mode = S.rangeMths === 1 ? 'weekly' : 'monthly';
 
-  // --- Weekly mode: 5 weeks back, each point = Mon of that week ---
   if (mode === 'weekly') {
     const labels = [], gold = [], plat = [], silv = [];
-    const totalWeeks = 5; // ~1 month
+    const totalWeeks = 5;
     for (let i = totalWeeks - 1; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i * 7);
-      // snap to Monday
       const day = d.getDay();
       d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
       labels.push((d.getMonth()+1)+'/'+(d.getDate()));
-      // interpolate from seed (last 5 weeks ≈ last 1–2 months)
       const baseIdx = SEED_GOLD.length - 2 + Math.round(i / totalWeeks);
-      const nG = Math.round((Math.random()-0.5)*120);
-      const nP = Math.round((Math.random()-0.5)*80);
-      const nS = Math.round((Math.random()-0.5)*6);
-      gold.push(SEED_GOLD[Math.min(baseIdx, SEED_GOLD.length-1)] + nG);
-      plat.push(SEED_PLAT[Math.min(baseIdx, SEED_PLAT.length-1)] + nP);
-      silv.push(SEED_SILV[Math.min(baseIdx, SEED_SILV.length-1)] + nS);
+      gold.push(SEED_GOLD[Math.min(baseIdx, SEED_GOLD.length-1)] + Math.round((Math.random()-0.5)*120));
+      plat.push(SEED_PLAT[Math.min(baseIdx, SEED_PLAT.length-1)] + Math.round((Math.random()-0.5)*80));
+      silv.push(SEED_SILV[Math.min(baseIdx, SEED_SILV.length-1)] + Math.round((Math.random()-0.5)*6));
     }
-    // last point = current
     gold[gold.length-1] = S.prices.gold || gold[gold.length-1];
     plat[plat.length-1] = S.prices.plat || plat[plat.length-1];
     silv[silv.length-1] = S.prices.silv || silv[silv.length-1];
@@ -517,19 +474,15 @@ function buildHistory() {
     return;
   }
 
-  // --- Monthly mode ---
   const totalMths = S.rangeMths === 6 ? 6 : 12;
   const labels = [], gold = [], plat = [], silv = [];
   for (let i = totalMths - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     labels.push((d.getMonth()+1)+'月\''+String(d.getFullYear()).slice(2));
     const seedIdx = SEED_GOLD.length - 1 - i;
-    const nG = Math.round((Math.random()-0.5)*80);
-    const nP = Math.round((Math.random()-0.5)*60);
-    const nS = Math.round((Math.random()-0.5)*4);
-    gold.push(SEED_GOLD[Math.max(0,Math.min(seedIdx,SEED_GOLD.length-1))] + nG);
-    plat.push(SEED_PLAT[Math.max(0,Math.min(seedIdx,SEED_PLAT.length-1))] + nP);
-    silv.push(SEED_SILV[Math.max(0,Math.min(seedIdx,SEED_SILV.length-1))] + nS);
+    gold.push(SEED_GOLD[Math.max(0,Math.min(seedIdx,SEED_GOLD.length-1))] + Math.round((Math.random()-0.5)*80));
+    plat.push(SEED_PLAT[Math.max(0,Math.min(seedIdx,SEED_PLAT.length-1))] + Math.round((Math.random()-0.5)*60));
+    silv.push(SEED_SILV[Math.max(0,Math.min(seedIdx,SEED_SILV.length-1))] + Math.round((Math.random()-0.5)*4));
   }
   gold[gold.length-1] = S.prices.gold || gold[gold.length-1];
   plat[plat.length-1] = S.prices.plat || plat[plat.length-1];
@@ -537,10 +490,10 @@ function buildHistory() {
   S.history = {labels, gold, plat, silv};
 }
 
-/* ===== Nice round step for Y-axis ===== */
+/* ===== Nice round Y-axis step ===== */
 function niceStep(range) {
   const rough = range / 4;
-  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const mag = Math.pow(10, Math.floor(Math.log10(rough || 1)));
   const norm = rough / mag;
   let nice;
   if (norm <= 1) nice = 1;
@@ -550,14 +503,13 @@ function niceStep(range) {
   return nice * mag;
 }
 
-/* ===== Build one individual chart ===== */
+/* ===== Build one chart ===== */
 function buildOneChart(metal, color, label, data, labels) {
   const canvas = document.getElementById('chart-' + metal);
   if (!canvas) return;
   const wrap = document.getElementById('chartScrollWrap-' + metal);
   const containerW = (wrap ? wrap.clientWidth : 0) || 320;
   const ptCount = labels.length;
-  // 1M(weekly)=5pts→fill container; 6M=6pts→~54px each; 1Y=12pts→~48px each
   const minPxPer = S.rangeMths === 1 ? containerW / ptCount : 50;
   const chartW = Math.max(containerW, ptCount * minPxPer);
 
@@ -565,17 +517,14 @@ function buildOneChart(metal, color, label, data, labels) {
   document.getElementById('chartContainer-' + metal).style.width = chartW + 'px';
   canvas.style.width = chartW + 'px';
   canvas.width  = chartW * (window.devicePixelRatio || 2);
-  canvas.height = 160   * (window.devicePixelRatio || 2);
+  canvas.height = 320   * (window.devicePixelRatio || 2);
 
   if (S.charts[metal]) S.charts[metal].destroy();
 
   const minV = Math.min(...data), maxV = Math.max(...data);
-  const step  = niceStep(maxV - minV || maxV * 0.05);
-  const yMin  = Math.floor(minV / step) * step;
-  const yMax  = Math.ceil(maxV  / step) * step;
-
-  // grid line color: subtle horizontal lines only
-  const gridColor = 'rgba(255,255,255,0.07)';
+  const step = niceStep(maxV - minV || maxV * 0.05);
+  const yMin = Math.floor(minV / step) * step;
+  const yMax = Math.ceil(maxV  / step) * step;
 
   S.charts[metal] = new Chart(canvas.getContext('2d'), {
     type: 'line',
@@ -585,9 +534,9 @@ function buildOneChart(metal, color, label, data, labels) {
         label,
         data,
         borderColor: color,
-        backgroundColor: 'transparent',  // 塗りつぶしなし
+        backgroundColor: 'transparent',
         fill: false,
-        tension: 0,                       // シャープな折れ線
+        tension: 0,
         borderWidth: 1.8,
         pointRadius: 3,
         pointBackgroundColor: color,
@@ -616,7 +565,7 @@ function buildOneChart(metal, color, label, data, labels) {
       },
       scales: {
         x: {
-          grid: {display:false},          // 縦グリッド線なし
+          grid: {display:false},
           border: {display:false},
           ticks: {color:'#7a7a8a', font:{size:10}, maxRotation:0, autoSkip:true, maxTicksLimit:8}
         },
@@ -625,12 +574,15 @@ function buildOneChart(metal, color, label, data, labels) {
           max: yMax,
           border: {display:false},
           grid: {
-            color: gridColor,              // 水平グリッド線のみ
+            color: 'rgba(255,255,255,0.10)',
             drawTicks: false,
+            lineWidth: 1,
+            borderDash: [4, 4],
           },
           ticks: {
             color:'#7a7a8a', font:{size:10},
             stepSize: step,
+            padding: 6,
             callback: v => {
               if (v >= 10000) return '¥'+(v/1000).toFixed(0)+'k';
               return '¥'+v;
@@ -668,93 +620,6 @@ function setRange(mths, btn) {
 }
 
 /* ===== Update price cards ===== */
-function updateCards() {
-  ['gold','plat','silv'].forEach(m => {
-    const p = S.prices[m], prev = S.prev[m];
-    if (!p) return;
-    document.getElementById('price-'+m).textContent = '¥'+p.toLocaleString();
-    const chEl = document.getElementById('change-'+m);
-    if (prev && prev !== p) {
-      const diff = p - prev, pct = ((diff/prev)*100).toFixed(2);
-      const sign = diff>=0?'+':'';
-      chEl.textContent = sign+diff.toLocaleString()+'('+sign+pct+'%)';
-      chEl.className = 'change '+(diff>0?'up':'dn');
-    } else if (prev) {
-      chEl.textContent = '±0 (0.00%)'; chEl.className='change nc';
-    }
-  });
-
-  // Alert tab current price labels
-  const lbls = {gold:'current-gold-label',plat:'current-plat-label',silv:'current-silv-label'};
-  Object.entries(lbls).forEach(([m,id]) => {
-    if (S.prices[m]) document.getElementById(id).textContent='現在価格: ¥'+S.prices[m].toLocaleString()+'/g';
-  });
-
-  document.getElementById('lastUpdate').textContent = '最終更新: '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-
-  // Data source badge
-  const badge = document.getElementById('dataBadge');
-  const badgeText = document.getElementById('dataBadgeText');
-  if (S.isLive) {
-    badge.className='data-badge live';
-    badgeText.textContent='● ライブ価格';
-  } else {
-    badge.className='data-badge demo';
-    badgeText.textContent='● 参考値（API接続中...）';
-  }
-}
-
-/* ===== Alerts ===== */
-function saveAlert(metal) {
-  const high = parseFloat(document.getElementById(metal+'-high').value);
-  const low = parseFloat(document.getElementById(metal+'-low').value);
-  S.alerts[metal] = {};
-  if (!isNaN(high) && high>0) S.alerts[metal].high = high;
-  if (!isNaN(low) && low>0) S.alerts[metal].low = low;
-  localStorage.setItem('alerts', JSON.stringify(S.alerts));
-  delete S.alertsFired[metal+'-high']; delete S.alertsFired[metal+'-low'];
-  localStorage.setItem('alertsFired', JSON.stringify(S.alertsFired));
-  const st = document.getElementById('status-'+metal);
-  const parts=[];
-  if (S.alerts[metal].high) parts.push('上限 ¥'+S.alerts[metal].high.toLocaleString());
-  if (S.alerts[metal].low) parts.push('下限 ¥'+S.alerts[metal].low.toLocaleString());
-  st.textContent = parts.length ? '✅ '+parts.join(' / ')+' を保存しました' : '⚠️ 価格を入力してください';
-  st.style.color = parts.length ? '#4dba6f' : '#e05c5c';
-  updateAlertDots();
-}
-
-function updateAlertDots() {
-  ['gold','plat','silv'].forEach(m => {
-    const has = S.alerts[m] && (S.alerts[m].high || S.alerts[m].low);
-    document.getElementById('card-'+m).classList.toggle('has-alert',!!has);
-  });
-}
-
-function checkAlerts() {
-  if (!S.notif.priceAlert) return;
-  const names={gold:'金',plat:'白金',silv:'銀'};
-  Object.entries(S.prices).forEach(([m,price]) => {
-    if (!price || !S.alerts[m]) return;
-    const {high, low} = S.alerts[m];
-    const kH=m+'-high', kL=m+'-low';
-    if (high && price>=high && !S.alertsFired[kH]) {
-      S.alertsFired[kH]=true; localStorage.setItem('alertsFired',JSON.stringify(S.alertsFired));
-      const msg=names[m]+'が上限 ¥'+high.toLocaleString()+'/g を超えました！\n現在 ¥'+price.toLocaleString()+'/g';
-      showAlertModal('🚨 上限アラート：'+names[m], msg);
-      sendNotification('上限アラート：'+names[m], msg, 'alert-'+m);
-    }
-    if (low && price<=low && !S.alertsFired[kL]) {
-      S.alertsFired[kL]=true; localStorage.setItem('alertsFired',JSON.stringify(S.alertsFired));
-      const msg=names[m]+'が下限 ¥'+low.toLocaleString()+'/g を下回りました！\n現在 ¥'+price.toLocaleString()+'/g';
-      showAlertModal('📉 下限アラート：'+names[m], msg);
-      sendNotification('下限アラート：'+names[m], msg, 'alert-'+m);
-    }
-    if (high && price < high*0.98) delete S.alertsFired[kH];
-    if (low && price > low*1.02) delete S.alertsFired[kL];
-  });
-}
-
-/* ===== Notifications ===== */
 async function requestPermission() {
   const st = document.getElementById('permStatus');
   if (!('Notification' in window)) { st.textContent='⚠️ このブラウザは通知未対応です'; st.style.color='#e05c5c'; return; }
@@ -840,12 +705,12 @@ function switchTab(name) {
 async function refreshData() {
   const btn=document.getElementById('refreshBtn');
   btn.classList.add('spinning');
-  await loadPrices();
+  const ok = await fetchWithTimeout();
   updateCards();
   renderChart();
   checkAlerts();
   btn.classList.remove('spinning');
-  showToast(S.isLive?'ライブ価格を取得しました':'参考値を表示中（API接続中）');
+  showToast(ok ? 'ライブ価格を取得しました' : '参考値を表示中（API接続中）');
 }
 
 /* ===== Restore UI ===== */
@@ -875,20 +740,69 @@ async function registerSW() {
 /* ===== Init ===== */
 async function init() {
   await registerSW();
-  await loadPrices();
+
+  // ① まずキャッシュ or 参考値で即座に表示（ローディング解除）
+  const cached = JSON.parse(localStorage.getItem('cachedPrices') || 'null');
+  if (cached && cached.gold > 15000) {
+    S.prices.gold = cached.gold;
+    S.prices.plat = cached.plat;
+    S.prices.silv = cached.silv;
+    S.isLive = false;
+  } else {
+    // 参考値（シードの最新）をセット
+    S.prices.gold = SEED_GOLD[SEED_GOLD.length-1];
+    S.prices.plat = SEED_PLAT[SEED_PLAT.length-1];
+    S.prices.silv = SEED_SILV[SEED_SILV.length-1];
+    S.isLive = false;
+  }
   updateCards();
   renderChart();
-  checkAlerts();
   restoreAlertInputs();
   restoreNotifUI();
   scheduleDailyNotif();
+  // ローディング画面をすぐ消す
   document.getElementById('loadingOverlay').classList.add('hidden');
-  // Auto-refresh every 5 minutes
-  S.autoTimer=setInterval(async()=>{ await loadPrices(); updateCards(); checkAlerts(); },300000);
+
+  // ② APIは裏で非同期取得（タイムアウト付き5秒）
+  fetchWithTimeout().then(ok => {
+    if (ok) { updateCards(); renderChart(); checkAlerts(); }
+  });
+
+  // ③ 5分ごとに自動更新
+  S.autoTimer = setInterval(() => {
+    fetchWithTimeout().then(ok => { if(ok){ updateCards(); checkAlerts(); } });
+  }, 300000);
 }
 
-window.addEventListener('load',init);
-window.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshData(); });
+// タイムアウト付きfetch wrapper
+async function fetchWithTimeout() {
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 5000); // 5秒でタイムアウト
+  try {
+    const result = await fetchMetalPrices(controller.signal);
+    clearTimeout(tid);
+    if (result && result.gold > 15000) {
+      S.prev = {...S.prices};
+      S.prices.gold = result.gold;
+      S.prices.plat = result.plat || S.prices.plat;
+      S.prices.silv = result.silv || S.prices.silv;
+      S.isLive = true;
+      localStorage.setItem('cachedPrices', JSON.stringify({...S.prices, ts: Date.now()}));
+      const badge=document.getElementById('dataBadge'); const badgeT=document.getElementById('dataBadgeText');
+      if(badge){badge.className='data-badge live';badgeT.textContent='● ライブ価格';}
+      return true;
+    }
+  } catch(e) { clearTimeout(tid); }
+  S.isLive = false;
+  return false;
+}
+
+window.addEventListener('load', init);
+window.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    fetchWithTimeout().then(ok => { if(ok){ updateCards(); checkAlerts(); } });
+  }
+});
 </script>
 </body>
 </html>
