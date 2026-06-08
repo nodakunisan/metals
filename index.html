@@ -733,74 +733,111 @@ function restoreNotifUI() {
 }
 
 /* ===== SW ===== */
-async function registerSW() {
-  if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('./sw.js'); } catch(e){} }
+function registerSW() {
+  // エラーが出ても絶対に止めない
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    }
+  } catch(e) {}
+}
+
+/* ===== ローディング解除（絶対確実） ===== */
+function hideLoading() {
+  try {
+    const el = document.getElementById('loadingOverlay');
+    if (el) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; el.style.display = 'none'; }
+  } catch(e) {}
 }
 
 /* ===== Init ===== */
-async function init() {
-  await registerSW();
+function init() {
+  // SW登録（非同期・ノンブロッキング）
+  registerSW();
 
-  // ① まずキャッシュ or 参考値で即座に表示（ローディング解除）
-  const cached = JSON.parse(localStorage.getItem('cachedPrices') || 'null');
-  if (cached && cached.gold > 15000) {
-    S.prices.gold = cached.gold;
-    S.prices.plat = cached.plat;
-    S.prices.silv = cached.silv;
+  try {
+    // キャッシュ or 参考値を即セット
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem('cachedPrices') || 'null'); } catch(e){}
+    if (cached && cached.gold > 15000) {
+      S.prices.gold = cached.gold;
+      S.prices.plat = cached.plat || SEED_PLAT[SEED_PLAT.length-1];
+      S.prices.silv = cached.silv || SEED_SILV[SEED_SILV.length-1];
+    } else {
+      S.prices.gold = SEED_GOLD[SEED_GOLD.length-1];
+      S.prices.plat = SEED_PLAT[SEED_PLAT.length-1];
+      S.prices.silv = SEED_SILV[SEED_SILV.length-1];
+    }
     S.isLive = false;
-  } else {
-    // 参考値（シードの最新）をセット
-    S.prices.gold = SEED_GOLD[SEED_GOLD.length-1];
-    S.prices.plat = SEED_PLAT[SEED_PLAT.length-1];
-    S.prices.silv = SEED_SILV[SEED_SILV.length-1];
-    S.isLive = false;
+  } catch(e) {
+    S.prices = {gold:22151, plat:9052, silv:344};
   }
-  updateCards();
-  renderChart();
-  restoreAlertInputs();
-  restoreNotifUI();
-  scheduleDailyNotif();
-  // ローディング画面をすぐ消す
-  document.getElementById('loadingOverlay').classList.add('hidden');
 
-  // ② APIは裏で非同期取得（タイムアウト付き5秒）
+  // 描画（各ステップを個別try-catch）
+  try { updateCards(); } catch(e) { console.warn('updateCards',e); }
+  try { renderChart(); } catch(e) { console.warn('renderChart',e); }
+  try { restoreAlertInputs(); } catch(e) {}
+  try { restoreNotifUI(); } catch(e) {}
+  try { scheduleDailyNotif(); } catch(e) {}
+
+  // ★ ローディングを必ず消す
+  hideLoading();
+
+  // API取得は裏でタイムアウト付き（画面表示をブロックしない）
   fetchWithTimeout().then(ok => {
-    if (ok) { updateCards(); renderChart(); checkAlerts(); }
-  });
+    if (ok) {
+      try { updateCards(); } catch(e) {}
+      try { renderChart(); } catch(e) {}
+      try { checkAlerts(); } catch(e) {}
+    }
+  }).catch(()=>{});
 
-  // ③ 5分ごとに自動更新
+  // 5分ごと自動更新
   S.autoTimer = setInterval(() => {
-    fetchWithTimeout().then(ok => { if(ok){ updateCards(); checkAlerts(); } });
+    fetchWithTimeout().then(ok => {
+      if (ok) { try{updateCards();}catch(e){} try{checkAlerts();}catch(e){} }
+    }).catch(()=>{});
   }, 300000);
 }
 
-// タイムアウト付きfetch wrapper
+// タイムアウト付きfetch（5秒）
 async function fetchWithTimeout() {
-  const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 5000); // 5秒でタイムアウト
+  let tid;
   try {
+    const controller = new AbortController();
+    tid = setTimeout(() => controller.abort(), 5000);
     const result = await fetchMetalPrices(controller.signal);
     clearTimeout(tid);
     if (result && result.gold > 15000) {
       S.prev = {...S.prices};
       S.prices.gold = result.gold;
-      S.prices.plat = result.plat || S.prices.plat;
-      S.prices.silv = result.silv || S.prices.silv;
+      if (result.plat) S.prices.plat = result.plat;
+      if (result.silv) S.prices.silv = result.silv;
       S.isLive = true;
-      localStorage.setItem('cachedPrices', JSON.stringify({...S.prices, ts: Date.now()}));
-      const badge=document.getElementById('dataBadge'); const badgeT=document.getElementById('dataBadgeText');
-      if(badge){badge.className='data-badge live';badgeT.textContent='● ライブ価格';}
+      try { localStorage.setItem('cachedPrices', JSON.stringify({...S.prices, ts:Date.now()})); } catch(e){}
+      try {
+        const b=document.getElementById('dataBadge'), t=document.getElementById('dataBadgeText');
+        if(b){b.className='data-badge live'; t.textContent='● ライブ価格';}
+      } catch(e){}
       return true;
     }
-  } catch(e) { clearTimeout(tid); }
+  } catch(e) { if(tid) clearTimeout(tid); }
   S.isLive = false;
   return false;
 }
 
-window.addEventListener('load', init);
+// DOMContentLoaded で即起動（loadより早い）
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init(); // すでにDOM準備済みなら即実行
+}
+
 window.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
-    fetchWithTimeout().then(ok => { if(ok){ updateCards(); checkAlerts(); } });
+    fetchWithTimeout().then(ok => {
+      if(ok){ try{updateCards();}catch(e){} try{checkAlerts();}catch(e){} }
+    }).catch(()=>{});
   }
 });
 </script>
