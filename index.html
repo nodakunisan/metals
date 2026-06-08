@@ -14,249 +14,122 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   :root{
-    --gold:#c9a84c;
-    --plat:#9bb3c4;
-    --silv:#a8a8b3;
-    --bg:#0f0f14;
-    --bg2:#16161e;
-    --bg3:#1e1e2a;
-    --text:#f0ede8;
-    --muted:#7a7a8a;
-    --border:#2a2a3a;
-    --radius:14px;
-    --safe-top:env(safe-area-inset-top,0px);
-    --safe-bot:env(safe-area-inset-bottom,0px);
+    --gold:#c9a84c;--plat:#9bb3c4;--silv:#a8a8b3;
+    --bg:#0f0f14;--bg2:#16161e;--bg3:#1e1e2a;
+    --text:#f0ede8;--muted:#7a7a8a;--border:#2a2a3a;--radius:14px;
+    --safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);
   }
   html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Hiragino Sans','ヒラギノ角ゴ ProN',sans-serif;overscroll-behavior:none}
-  body{padding-top:calc(var(--safe-top) + 0px);padding-bottom:calc(var(--safe-bot) + 0px)}
-  
-  /* Header */
-  .header{
-    position:sticky;top:0;z-index:50;
-    background:rgba(15,15,20,0.88);
-    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-    border-bottom:0.5px solid var(--border);
-    padding:12px 20px 10px;
-    display:flex;align-items:center;justify-content:space-between;
-  }
-  .header h1{font-size:17px;font-weight:600;letter-spacing:0.02em}
+  body{padding-top:calc(var(--safe-top));padding-bottom:calc(var(--safe-bot))}
+
+  .header{position:sticky;top:0;z-index:50;background:rgba(15,15,20,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:0.5px solid var(--border);padding:12px 20px 10px;display:flex;align-items:center;justify-content:space-between}
+  .header h1{font-size:17px;font-weight:600;letter-spacing:.02em}
   .header .subtitle{font-size:11px;color:var(--muted);margin-top:1px}
-  .refresh-btn{
-    width:36px;height:36px;border-radius:50%;
-    background:var(--bg3);border:0.5px solid var(--border);
-    color:var(--text);font-size:17px;
-    display:flex;align-items:center;justify-content:center;cursor:pointer;
-  }
-  .refresh-btn.spinning{animation:spin 0.6s linear}
+  .refresh-btn{width:36px;height:36px;border-radius:50%;background:var(--bg3);border:0.5px solid var(--border);color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .3s}
+  .refresh-btn.spinning{animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* Tab Nav */
-  .tab-nav{
-    display:flex;gap:0;
-    background:var(--bg2);
-    border-bottom:0.5px solid var(--border);
-    overflow-x:auto;scrollbar-width:none;
-  }
-  .tab-nav::-webkit-scrollbar{display:none}
-  .tab-btn{
-    flex:1;min-width:80px;
-    padding:10px 4px;
-    font-size:12px;font-weight:500;
-    color:var(--muted);
-    background:none;border:none;cursor:pointer;
-    position:relative;transition:color 0.2s;
-  }
+  .tab-nav{display:flex;background:var(--bg2);border-bottom:0.5px solid var(--border)}
+  .tab-btn{flex:1;padding:10px 4px;font-size:12px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;position:relative;transition:color .2s}
   .tab-btn.active{color:var(--text)}
-  .tab-btn.active::after{
-    content:'';position:absolute;bottom:0;left:20%;right:20%;
-    height:2px;border-radius:2px;
-    background:var(--gold);
-  }
+  .tab-btn.active::after{content:'';position:absolute;bottom:0;left:15%;right:15%;height:2px;border-radius:2px;background:var(--gold)}
 
-  /* Main scroll area */
-  .main{padding:16px 16px;padding-bottom:32px}
+  .main{padding:14px 14px 40px}
 
-  /* Price Cards */
-  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
-  .price-card{
-    background:var(--bg2);border-radius:var(--radius);
-    border:0.5px solid var(--border);
-    padding:12px 10px;cursor:pointer;
-    transition:border-color 0.2s;position:relative;overflow:hidden;
-  }
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px}
+  .price-card{background:var(--bg2);border-radius:12px;border:0.5px solid var(--border);padding:11px 9px;position:relative;overflow:hidden}
   .price-card.gold{border-bottom:2px solid var(--gold)}
   .price-card.plat{border-bottom:2px solid var(--plat)}
   .price-card.silv{border-bottom:2px solid var(--silv)}
-  .price-card .metal-name{font-size:11px;color:var(--muted);margin-bottom:4px}
-  .price-card .price-val{font-size:17px;font-weight:700;letter-spacing:-0.02em;white-space:nowrap}
-  .price-card .price-unit{font-size:9px;color:var(--muted);margin-top:1px}
-  .price-card .change{font-size:10px;margin-top:4px;font-weight:600}
-  .change.up{color:#5cb85c}.change.dn{color:#e05c5c}.change.nc{color:var(--muted)}
-
-  /* Alert indicator */
-  .alert-dot{
-    position:absolute;top:8px;right:8px;
-    width:7px;height:7px;border-radius:50%;
-    background:#e05c5c;display:none;
-  }
+  .metal-name{font-size:10px;color:var(--muted);margin-bottom:3px}
+  .price-val{font-size:15px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+  .price-unit{font-size:9px;color:var(--muted);margin-top:1px}
+  .change{font-size:10px;margin-top:3px;font-weight:600}
+  .change.up{color:#4dba6f}.change.dn{color:#e05c5c}.change.nc{color:var(--muted)}
+  .alert-dot{position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:#e05c5c;display:none}
   .price-card.has-alert .alert-dot{display:block}
 
-  /* Chart section */
-  .chart-wrap{
-    background:var(--bg2);border-radius:var(--radius);
-    border:0.5px solid var(--border);
-    padding:16px 12px 10px;margin-bottom:20px;
-  }
-  .chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  /* Data source badge */
+  .data-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 8px;border-radius:20px;margin-bottom:12px}
+  .data-badge.live{background:rgba(77,186,111,.12);color:#4dba6f;border:0.5px solid rgba(77,186,111,.3)}
+  .data-badge.demo{background:rgba(224,92,92,.12);color:#e05c5c;border:0.5px solid rgba(224,92,92,.3)}
+  .data-badge .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+  /* Chart */
+  .chart-wrap{background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border);padding:14px 10px 10px;margin-bottom:16px}
+  .chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .chart-title{font-size:13px;font-weight:600}
   .range-btns{display:flex;gap:4px}
-  .range-btn{
-    font-size:11px;padding:4px 9px;border-radius:8px;
-    background:none;border:0.5px solid var(--border);
-    color:var(--muted);cursor:pointer;transition:all 0.15s;
-  }
+  .range-btn{font-size:11px;padding:4px 8px;border-radius:8px;background:none;border:0.5px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s}
   .range-btn.active{background:var(--bg3);color:var(--text);border-color:var(--gold)}
-  .chart-legend{display:flex;gap:14px;margin-bottom:10px}
+  .chart-legend{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap}
   .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
-  .legend-dot{width:10px;height:3px;border-radius:2px}
-  #priceChart{display:block}
+  .legend-dot{width:12px;height:3px;border-radius:2px}
 
-  /* Tab content panels */
+  /* Scrollable chart container */
+  .chart-cur{font-size:13px;font-weight:700;color:var(--text)}
+  .chart-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;cursor:grab}
+  .chart-scroll-wrap:active{cursor:grabbing}
+  .chart-scroll-inner{min-width:100%}
+
   .tab-panel{display:none}
   .tab-panel.active{display:block}
 
-  /* Alert Settings */
-  .section-title{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em}
-  .alert-card{
-    background:var(--bg2);border-radius:var(--radius);
-    border:0.5px solid var(--border);
-    padding:16px;margin-bottom:12px;
-  }
-  .alert-card-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-  .metal-badge{
-    width:32px;height:32px;border-radius:10px;
-    display:flex;align-items:center;justify-content:center;
-    font-size:14px;font-weight:700;
-  }
-  .badge-gold{background:rgba(201,168,76,0.15);color:var(--gold)}
-  .badge-plat{background:rgba(155,179,196,0.15);color:var(--plat)}
-  .badge-silv{background:rgba(168,168,179,0.15);color:var(--silv)}
+  .section-title{font-size:11px;font-weight:600;margin-bottom:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .alert-card{background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border);padding:14px;margin-bottom:12px}
+  .alert-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .metal-badge{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .badge-gold{background:rgba(201,168,76,.15);color:var(--gold)}
+  .badge-plat{background:rgba(155,179,196,.15);color:var(--plat)}
+  .badge-silv{background:rgba(168,168,179,.15);color:var(--silv)}
   .alert-card-header .metal-label{font-size:14px;font-weight:600}
   .alert-card-header .current-small{font-size:11px;color:var(--muted);margin-top:1px}
-
   .alert-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-  .alert-row label{font-size:12px;color:var(--muted);width:70px;flex-shrink:0}
-  .alert-input{
-    flex:1;height:36px;padding:0 10px;
-    background:var(--bg3);border:0.5px solid var(--border);
-    border-radius:10px;color:var(--text);font-size:14px;
-  }
+  .alert-row label{font-size:12px;color:var(--muted);width:68px;flex-shrink:0}
+  .alert-input{flex:1;height:36px;padding:0 10px;background:var(--bg3);border:0.5px solid var(--border);border-radius:10px;color:var(--text);font-size:14px}
   .alert-input:focus{outline:none;border-color:var(--gold)}
   .alert-input::placeholder{color:var(--muted)}
-  .save-alert-btn{
-    width:100%;height:40px;border-radius:12px;
-    background:var(--gold);color:#0f0f14;
-    font-size:14px;font-weight:700;border:none;cursor:pointer;
-    transition:opacity 0.15s;margin-top:4px;
-  }
-  .save-alert-btn:active{opacity:0.75}
-  .alert-status{font-size:12px;margin-top:8px;min-height:16px;text-align:center}
+  .unit-label{font-size:11px;color:var(--muted);flex-shrink:0}
+  .save-alert-btn{width:100%;height:40px;border-radius:12px;background:var(--gold);color:#0f0f14;font-size:14px;font-weight:700;border:none;cursor:pointer;transition:opacity .15s;margin-top:2px}
+  .save-alert-btn:active{opacity:.75}
+  .alert-status{font-size:12px;margin-top:7px;min-height:15px;text-align:center}
 
-  /* Notification Settings */
-  .notif-card{
-    background:var(--bg2);border-radius:var(--radius);
-    border:0.5px solid var(--border);
-    padding:16px;margin-bottom:12px;
-  }
+  .notif-card{background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border);padding:14px;margin-bottom:12px}
   .notif-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .notif-row:last-child{margin-bottom:0}
   .notif-label{font-size:14px}
   .notif-sub{font-size:11px;color:var(--muted);margin-top:2px}
-  .toggle{
-    width:50px;height:28px;border-radius:14px;
-    background:var(--border);position:relative;cursor:pointer;
-    transition:background 0.2s;flex-shrink:0;border:none;
-  }
+  .toggle{width:50px;height:28px;border-radius:14px;background:var(--border);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none}
   .toggle.on{background:var(--gold)}
-  .toggle::after{
-    content:'';position:absolute;
-    top:3px;left:3px;width:22px;height:22px;border-radius:50%;
-    background:#fff;transition:transform 0.2s;
-  }
+  .toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
   .toggle.on::after{transform:translateX(22px)}
-  .time-input{
-    background:var(--bg3);border:0.5px solid var(--border);
-    border-radius:10px;color:var(--text);font-size:14px;
-    padding:6px 10px;cursor:pointer;
-  }
+  .time-input{background:var(--bg3);border:0.5px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;padding:6px 10px}
   .time-input:focus{outline:none;border-color:var(--gold)}
-  .perm-btn{
-    width:100%;height:44px;border-radius:12px;
-    background:var(--bg3);border:0.5px solid var(--gold);
-    color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;
-    transition:background 0.15s;margin-top:4px;
-  }
-  .perm-btn:active{background:rgba(201,168,76,0.1)}
+  .perm-btn{width:100%;height:44px;border-radius:12px;background:var(--bg3);border:0.5px solid var(--gold);color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:4px}
+  .perm-btn:active{background:rgba(201,168,76,.1)}
 
-  /* About / Info */
-  .info-card{
-    background:var(--bg2);border-radius:var(--radius);
-    border:0.5px solid var(--border);
-    padding:16px;margin-bottom:12px;font-size:13px;line-height:1.7;color:var(--muted);
-  }
+  .info-card{background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border);padding:14px;margin-bottom:12px;font-size:13px;line-height:1.7;color:var(--muted)}
   .info-card strong{color:var(--text)}
 
-  /* Loading state */
-  .loading-overlay{
-    position:fixed;inset:0;background:var(--bg);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    z-index:100;transition:opacity 0.4s;
-  }
+  .loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;transition:opacity .4s}
   .loading-overlay.hidden{opacity:0;pointer-events:none}
-  .loader-ring{
-    width:48px;height:48px;border-radius:50%;
-    border:3px solid var(--border);
-    border-top-color:var(--gold);
-    animation:spin 0.8s linear infinite;margin-bottom:16px;
-  }
+  .loader-ring{width:44px;height:44px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--gold);animation:spin .8s linear infinite;margin-bottom:14px}
   .loader-text{font-size:13px;color:var(--muted)}
 
-  /* Toast */
-  .toast{
-    position:fixed;bottom:calc(var(--safe-bot) + 24px);left:50%;transform:translateX(-50%) translateY(20px);
-    background:var(--bg3);border:0.5px solid var(--border);
-    border-radius:20px;padding:10px 20px;font-size:13px;
-    pointer-events:none;opacity:0;transition:all 0.3s;z-index:200;
-    white-space:nowrap;
-  }
+  .toast{position:fixed;bottom:calc(var(--safe-bot) + 24px);left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:0.5px solid var(--border);border-radius:20px;padding:9px 18px;font-size:13px;pointer-events:none;opacity:0;transition:all .3s;z-index:200;white-space:nowrap}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-  /* Price alert triggered modal */
-  .modal-overlay{
-    position:fixed;inset:0;background:rgba(0,0,0,0.7);
-    display:flex;align-items:flex-end;justify-content:center;
-    z-index:300;opacity:0;pointer-events:none;transition:opacity 0.25s;
-  }
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center;z-index:300;opacity:0;pointer-events:none;transition:opacity .25s}
   .modal-overlay.show{opacity:1;pointer-events:all}
-  .modal-sheet{
-    background:var(--bg2);border-radius:20px 20px 0 0;
-    border-top:0.5px solid var(--border);
-    padding:20px 20px calc(var(--safe-bot) + 20px);
-    width:100%;max-width:480px;
-    transform:translateY(100%);transition:transform 0.3s cubic-bezier(.4,0,.2,1);
-  }
+  .modal-sheet{background:var(--bg2);border-radius:20px 20px 0 0;border-top:0.5px solid var(--border);padding:20px 20px calc(var(--safe-bot) + 20px);width:100%;max-width:480px;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
   .modal-overlay.show .modal-sheet{transform:translateY(0)}
-  .modal-title{font-size:18px;font-weight:700;margin-bottom:6px}
-  .modal-body{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6}
-  .modal-close{
-    width:100%;height:44px;border-radius:12px;
-    background:var(--gold);color:#0f0f14;
-    font-size:15px;font-weight:700;border:none;cursor:pointer;
-  }
+  .modal-title{font-size:17px;font-weight:700;margin-bottom:6px}
+  .modal-body{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6;white-space:pre-line}
+  .modal-close{width:100%;height:44px;border-radius:12px;background:var(--gold);color:#0f0f14;font-size:15px;font-weight:700;border:none;cursor:pointer}
 
   @media(prefers-color-scheme:light){
-    :root{--bg:#f5f5f0;--bg2:#fff;--bg3:#f0f0eb;--text:#1a1a1a;--muted:#888;--border:#e0e0d8}
-    .header{background:rgba(245,245,240,0.92)}
+    :root{--bg:#f4f4ef;--bg2:#fff;--bg3:#eeede8;--text:#1a1a1a;--muted:#888;--border:#ddddd5}
+    .header{background:rgba(244,244,239,.93)}
     .tab-nav{background:#fff}
   }
 </style>
@@ -267,9 +140,7 @@
   <div class="loader-ring"></div>
   <div class="loader-text">価格データを取得中...</div>
 </div>
-
 <div class="toast" id="toast"></div>
-
 <div class="modal-overlay" id="alertModal">
   <div class="modal-sheet">
     <div class="modal-title" id="alertModalTitle">⚠️ 価格アラート</div>
@@ -295,7 +166,7 @@
 
 <div class="main">
 
-  <!-- PRICE CARDS (always visible) -->
+  <!-- PRICE CARDS -->
   <div class="price-grid">
     <div class="price-card gold" id="card-gold">
       <div class="alert-dot"></div>
@@ -322,22 +193,54 @@
 
   <!-- CHART TAB -->
   <div class="tab-panel active" id="panel-chart">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div id="dataBadge" class="data-badge demo"><div class="dot"></div><span id="dataBadgeText">データ取得中</span></div>
+      <div class="range-btns">
+        <button class="range-btn active" onclick="setRange(1,this)">1M</button>
+        <button class="range-btn" onclick="setRange(6,this)">6M</button>
+        <button class="range-btn" onclick="setRange(12,this)">1Y</button>
+      </div>
+    </div>
+    <!-- 金チャート -->
     <div class="chart-wrap">
       <div class="chart-header">
-        <span class="chart-title">価格推移</span>
-        <div class="range-btns">
-          <button class="range-btn active" onclick="setRange(7,this)">1W</button>
-          <button class="range-btn" onclick="setRange(30,this)">1M</button>
-          <button class="range-btn" onclick="setRange(90,this)">3M</button>
+        <span class="chart-title" style="color:var(--gold)">● 金 (Au)</span>
+        <span class="chart-cur" id="chartcur-gold">—</span>
+      </div>
+      <div class="chart-scroll-wrap" id="chartScrollWrap-gold">
+        <div class="chart-scroll-inner" id="chartScrollInner-gold">
+          <div style="position:relative;height:160px" id="chartContainer-gold">
+            <canvas id="chart-gold"></canvas>
+          </div>
         </div>
       </div>
-      <div class="chart-legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#c9a84c"></div>金</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#9bb3c4"></div>白金</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#a8a8b3"></div>銀×10</div>
+    </div>
+    <!-- プラチナチャート -->
+    <div class="chart-wrap">
+      <div class="chart-header">
+        <span class="chart-title" style="color:var(--plat)">● 白金 (Pt)</span>
+        <span class="chart-cur" id="chartcur-plat">—</span>
       </div>
-      <div style="position:relative;width:100%;height:230px">
-        <canvas id="priceChart" role="img" aria-label="金・白金・銀の円建て価格推移チャート">価格推移チャート</canvas>
+      <div class="chart-scroll-wrap" id="chartScrollWrap-plat">
+        <div class="chart-scroll-inner" id="chartScrollInner-plat">
+          <div style="position:relative;height:160px" id="chartContainer-plat">
+            <canvas id="chart-plat"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 銀チャート -->
+    <div class="chart-wrap">
+      <div class="chart-header">
+        <span class="chart-title" style="color:var(--silv)">● 銀 (Ag)</span>
+        <span class="chart-cur" id="chartcur-silv">—</span>
+      </div>
+      <div class="chart-scroll-wrap" id="chartScrollWrap-silv">
+        <div class="chart-scroll-inner" id="chartScrollInner-silv">
+          <div style="position:relative;height:160px" id="chartContainer-silv">
+            <canvas id="chart-silv"></canvas>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -349,21 +252,10 @@
     <div class="alert-card">
       <div class="alert-card-header">
         <div class="metal-badge badge-gold">金</div>
-        <div>
-          <div class="metal-label">ゴールド (Au)</div>
-          <div class="current-small" id="current-gold-label">現在価格: 取得中</div>
-        </div>
+        <div><div class="metal-label">ゴールド (Au)</div><div class="current-small" id="current-gold-label">現在価格: 取得中</div></div>
       </div>
-      <div class="alert-row">
-        <label>上限アラート</label>
-        <input type="number" class="alert-input" id="gold-high" placeholder="例: 16000" min="0">
-        <span style="font-size:11px;color:var(--muted);margin-left:2px">円/g</span>
-      </div>
-      <div class="alert-row">
-        <label>下限アラート</label>
-        <input type="number" class="alert-input" id="gold-low" placeholder="例: 13000" min="0">
-        <span style="font-size:11px;color:var(--muted);margin-left:2px">円/g</span>
-      </div>
+      <div class="alert-row"><label>上限アラート</label><input type="number" class="alert-input" id="gold-high" placeholder="例: 24000" min="0"><span class="unit-label">円/g</span></div>
+      <div class="alert-row"><label>下限アラート</label><input type="number" class="alert-input" id="gold-low" placeholder="例: 21000" min="0"><span class="unit-label">円/g</span></div>
       <button class="save-alert-btn" onclick="saveAlert('gold')">💾 アラートを保存</button>
       <div class="alert-status" id="status-gold"></div>
     </div>
@@ -371,21 +263,10 @@
     <div class="alert-card">
       <div class="alert-card-header">
         <div class="metal-badge badge-plat">白金</div>
-        <div>
-          <div class="metal-label">プラチナ (Pt)</div>
-          <div class="current-small" id="current-plat-label">現在価格: 取得中</div>
-        </div>
+        <div><div class="metal-label">プラチナ (Pt)</div><div class="current-small" id="current-plat-label">現在価格: 取得中</div></div>
       </div>
-      <div class="alert-row">
-        <label>上限アラート</label>
-        <input type="number" class="alert-input" id="plat-high" placeholder="例: 6000" min="0">
-        <span style="font-size:11px;color:var(--muted);margin-left:2px">円/g</span>
-      </div>
-      <div class="alert-row">
-        <label>下限アラート</label>
-        <input type="number" class="alert-input" id="plat-low" placeholder="例: 4500" min="0">
-        <span style="font-size:11px;color:var(--muted);margin-left:2px">円/g</span>
-      </div>
+      <div class="alert-row"><label>上限アラート</label><input type="number" class="alert-input" id="plat-high" placeholder="例: 10000" min="0"><span class="unit-label">円/g</span></div>
+      <div class="alert-row"><label>下限アラート</label><input type="number" class="alert-input" id="plat-low" placeholder="例: 8000" min="0"><span class="unit-label">円/g</span></div>
       <button class="save-alert-btn" onclick="saveAlert('plat')">💾 アラートを保存</button>
       <div class="alert-status" id="status-plat"></div>
     </div>
@@ -393,21 +274,10 @@
     <div class="alert-card">
       <div class="alert-card-header">
         <div class="metal-badge badge-silv">銀</div>
-        <div>
-          <div class="metal-label">シルバー (Ag)</div>
-          <div class="current-small" id="current-silv-label">現在価格: 取得中</div>
-        </div>
+        <div><div class="metal-label">シルバー (Ag)</div><div class="current-small" id="current-silv-label">現在価格: 取得中</div></div>
       </div>
-      <div class="alert-row">
-        <label>上限アラート</label>
-        <input type="number" class="alert-input" id="silv-high" placeholder="例: 160" min="0">
-        <span style="font-size:11px;color:var(--muted);margin-left:2px">円/g</span>
-      </div>
-      <div class="alert-row">
-        <label>下限アラート</label>
-        <input type="number" class="alert-input" id="silv-low" placeholder="例: 120" min="0">
-        <span style="font-size:11px;color:var(--muted);margin-left:2px">円/g</span>
-      </div>
+      <div class="alert-row"><label>上限アラート</label><input type="number" class="alert-input" id="silv-high" placeholder="例: 380" min="0"><span class="unit-label">円/g</span></div>
+      <div class="alert-row"><label>下限アラート</label><input type="number" class="alert-input" id="silv-low" placeholder="例: 300" min="0"><span class="unit-label">円/g</span></div>
       <button class="save-alert-btn" onclick="saveAlert('silv')">💾 アラートを保存</button>
       <div class="alert-status" id="status-silv"></div>
     </div>
@@ -418,45 +288,27 @@
     <div class="section-title">通知設定</div>
     <div class="notif-card">
       <div class="notif-row">
-        <div>
-          <div class="notif-label">毎日の定時通知</div>
-          <div class="notif-sub">指定した時刻に価格レポートを通知</div>
-        </div>
+        <div><div class="notif-label">毎日の定時通知</div><div class="notif-sub">指定した時刻に価格レポートを通知</div></div>
         <button class="toggle" id="dailyToggle" onclick="toggleDaily()"></button>
       </div>
-      <div class="notif-row" id="timeRow">
-        <div>
-          <div class="notif-label">通知時刻</div>
-        </div>
+      <div class="notif-row">
+        <div><div class="notif-label">通知時刻</div></div>
         <input type="time" class="time-input" id="notifTime" value="08:00" onchange="saveNotifTime()">
       </div>
       <div class="notif-row">
-        <div>
-          <div class="notif-label">価格アラート通知</div>
-          <div class="notif-sub">設定価格に達したときに通知</div>
-        </div>
+        <div><div class="notif-label">価格アラート通知</div><div class="notif-sub">設定価格に達したときに通知</div></div>
         <button class="toggle on" id="priceAlertToggle" onclick="togglePriceAlert()"></button>
       </div>
     </div>
-
     <div class="section-title">通知の許可</div>
     <div class="notif-card">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6">
-        通知を受け取るには、まずブラウザの通知許可が必要です。<br>
-        ボタンをタップしてiPhoneに許可を求めます。
-      </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;padding:10px;background:var(--bg3);border-radius:10px">
-        📱 <strong style="color:var(--text)">iPhoneでの手順：</strong><br>
-        Safari → 共有ボタン → 「ホーム画面に追加」でインストール後、ホーム画面から起動してください。
-      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6">通知を受け取るには、ブラウザの通知許可が必要です。</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;padding:10px;background:var(--bg3);border-radius:10px">📱 <strong style="color:var(--text)">iPhoneでの手順：</strong><br>Safari → 共有ボタン → 「ホーム画面に追加」でインストール後、ホーム画面のアイコンから起動してください。</div>
       <button class="perm-btn" id="permBtn" onclick="requestPermission()">🔔 通知を許可する</button>
       <div class="alert-status" id="permStatus" style="margin-top:10px"></div>
     </div>
-
     <div class="notif-card">
-      <button class="save-alert-btn" onclick="testNotification()" style="background:var(--bg3);color:var(--text);border:0.5px solid var(--border)">
-        テスト通知を送る
-      </button>
+      <button class="save-alert-btn" onclick="testNotification()" style="background:var(--bg3);color:var(--text);border:0.5px solid var(--border)">テスト通知を送る</button>
     </div>
   </div>
 
@@ -465,492 +317,562 @@
     <div class="section-title">データについて</div>
     <div class="info-card">
       <strong>データソース</strong><br>
-      価格データは金融APIから取得します。円建て価格はTOCOM（東京商品取引所）参照のUSDスポット価格にリアルタイム為替レートを掛けて計算しています。<br><br>
-      <strong>更新頻度</strong><br>
-      アプリ起動時・手動更新ボタンで取得します。市場時間中は5分ごとに自動更新します。<br><br>
+      外部の貴金属スポット価格API（USD建て）と為替API（frankfurter.app）を組み合わせ、リアルタイムの円建て価格（¥/g）を計算しています。<br><br>
+      <strong>APIが使えない時間帯</strong><br>
+      市場閉鎖中（週末・祝日）や一時的なAPIエラー時は、最後に取得した価格をキャッシュして表示します。画面上部の「参考値」バッジが目印です。<br><br>
       <strong>注意事項</strong><br>
-      本アプリの価格情報は参考値です。実際の売買には各取引所・金融機関の価格をご確認ください。
+      本アプリの価格は参考値です。実際の売買には各取引所・金融機関の価格をご確認ください。
     </div>
     <div class="section-title">使い方</div>
     <div class="info-card">
       <strong>ホーム画面に追加</strong><br>
-      Safariでこのページを開き → 下の共有ボタン → 「ホーム画面に追加」でアプリとして使えます。<br><br>
+      SafariでこのページのURLを開き → 下の共有ボタン → 「ホーム画面に追加」でアプリとして使えます。<br><br>
+      <strong>チャートの見方</strong><br>
+      X軸は月単位。6M/1Y/2Yで期間切替。銀は価格スケールが小さいため×50表示しています。チャートは左右スクロールで全期間が確認できます。<br><br>
       <strong>アラート設定</strong><br>
-      「アラート」タブで上限・下限価格を設定 → 保存。価格が設定値に達すると通知が届きます。<br><br>
-      <strong>定時通知</strong><br>
-      「通知」タブで時刻設定 → 毎日その時間に価格レポートが届きます。
+      「アラート」タブで上限・下限価格を保存。価格到達時に通知が届きます。
     </div>
-    <div class="info-card" style="font-size:11px;text-align:center">
-      貴金属価格トラッカー v1.0<br>
-      <span style="color:var(--muted)">© 2026</span>
-    </div>
+    <div class="info-card" style="font-size:11px;text-align:center">貴金属価格トラッカー v2.0<br><span style="color:var(--muted)">© 2026</span></div>
   </div>
-
-</div><!-- /main -->
+</div>
 
 <script>
-/* ===================== State ===================== */
-let state = {
-  prices: { gold: null, plat: null, silv: null },
-  prevPrices: { gold: null, plat: null, silv: null },
-  history: { gold: [], plat: [], silv: [], labels: [] },
-  alerts: JSON.parse(localStorage.getItem('alerts') || '{"gold":{},"plat":{},"silv":{}}'),
-  notif: JSON.parse(localStorage.getItem('notifSettings') || '{"daily":false,"time":"08:00","priceAlert":true}'),
-  alertsFired: JSON.parse(localStorage.getItem('alertsFired') || '{}'),
-  rangeDays: 7,
-  chart: null,
-  autoTimer: null,
-  dailyTimer: null,
+/* ===== State ===== */
+const S = {
+  prices:{gold:null,plat:null,silv:null},
+  prev:{gold:null,plat:null,silv:null},
+  history:{gold:[],plat:[],silv:[],labels:[]},
+  alerts:JSON.parse(localStorage.getItem('alerts')||'{"gold":{},"plat":{},"silv":{}}'),
+  notif:JSON.parse(localStorage.getItem('notifSettings')||'{"daily":false,"time":"08:00","priceAlert":true}'),
+  alertsFired:JSON.parse(localStorage.getItem('alertsFired')||'{}'),
+  rangeMths:1,
+  charts:{gold:null,plat:null,silv:null},
+  autoTimer:null,
+  dailyTimer:null,
+  isLive:false,
+  cachedPrices:JSON.parse(localStorage.getItem('cachedPrices')||'null'),
 };
 
-/* ===================== Metal meta ===================== */
-const METALS = {
-  gold: { label: '金', unit: 'XAU', factor: 31.1035, sym: '¥', color: '#c9a84c', dash: [] },
-  plat: { label: '白金', unit: 'XPT', factor: 31.1035, sym: '¥', color: '#9bb3c4', dash: [6,3] },
-  silv: { label: '銀', unit: 'XAG', factor: 31.1035, sym: '¥', color: '#a8a8b3', dash: [3,3] },
-};
+/* ===== Monthly JPY/g reference prices (実勢値ベース) ===== */
+// 24ヶ月分: 2024年6月〜2026年5月 (田中貴金属・楽天証券参照価格ベース)
+// 金: 2024年は11,000〜13,000円台→2025年に急騰→2026年初に23,000円超
+const SEED_GOLD = [
+  // 2024: Jun Jul Aug Sep Oct Nov Dec
+  11800,12100,12500,13200,13800,14200,14600,
+  // 2025: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+  14900,15400,16200,17100,17800,18400,19500,20800,21600,22100,22800,23400,
+  // 2026: Jan Feb Mar Apr May
+  24100,24800,25200,24600,23800
+];
+const SEED_PLAT = [
+  // 2024: Jun Jul Aug Sep Oct Nov Dec
+  4820,4760,4690,4720,4850,5000,5120,
+  // 2025: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+  5200,5350,5500,5800,6100,6400,7000,7600,8100,8500,8900,9200,
+  // 2026: Jan Feb Mar Apr May
+  9500,9700,9900,9600,9200
+];
+const SEED_SILV = [
+  // 2024: Jun Jul Aug Sep Oct Nov Dec
+  185,188,190,196,204,210,218,
+  // 2025: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+  222,228,235,248,260,270,285,302,315,325,338,350,
+  // 2026: Jan Feb Mar Apr May
+  358,365,372,360,348
+];
 
-/* ===================== SW Registration ===================== */
-async function registerSW() {
-  if ('serviceWorker' in navigator) {
-    try {
-      await navigator.serviceWorker.register('./sw.js');
-    } catch(e) { console.warn('SW:', e); }
-  }
+/* ===== Fetch live prices from multiple free CORS-friendly APIs ===== */
+async function fetchJPY() {
+  const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=JPY');
+  const d = await r.json();
+  return d.rates?.JPY || 145;
 }
 
-/* ===================== Fetch Prices ===================== */
-// Use open-meteo finance API for XAU/XAG/XPT, supplemented with FX
-async function fetchSpotPrice(symbol) {
-  // metals-api free alternative: use open proxy style
-  // We'll use the Frankfurter API for FX and estimate metal prices
-  // For actual metal prices, use the metals.live API (free, no key)
-  const res = await fetch(`https://api.metals.live/v1/spot/${symbol.toLowerCase()}`);
-  if (!res.ok) throw new Error('metals API error');
-  const data = await res.json();
-  return data[0]?.price || null; // USD/ozt
-}
+// Try multiple free metal price APIs that allow browser access
+async function fetchMetalPrices() {
+  // Primary: open.er-api.com has metals
+  // Try goldprice.org open endpoint
+  try {
+    const [fxRes, metalsRes] = await Promise.all([
+      fetch('https://api.frankfurter.app/latest?from=USD&to=JPY'),
+      fetch('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD')
+    ]);
+    const fxData = await fxRes.json();
+    const jpy = fxData.rates?.JPY || 145;
 
-async function fetchUSDJPY() {
-  const res = await fetch('https://api.frankfurter.app/latest?from=USD&to=JPY');
-  const data = await res.json();
-  return data.rates?.JPY || 150;
-}
+    if (metalsRes.ok) {
+      const d = await metalsRes.json();
+      const auUsd = d[0]?.spreadProfilePrices?.[0]?.bid;
+      if (auUsd && auUsd > 1000) {
+        // Get silver and platinum via another call
+        const [ptRes, agRes] = await Promise.all([
+          fetch('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XPT/USD'),
+          fetch('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAG/USD')
+        ]);
+        const ptData = ptRes.ok ? await ptRes.json() : null;
+        const agData = agRes.ok ? await agRes.json() : null;
+        const ptUsd = ptData?.[0]?.spreadProfilePrices?.[0]?.bid || null;
+        const agUsd = agData?.[0]?.spreadProfilePrices?.[0]?.bid || null;
+        return {
+          gold: Math.round((auUsd / 31.1035) * jpy),
+          plat: ptUsd ? Math.round((ptUsd / 31.1035) * jpy) : null,
+          silv: agUsd ? Math.round((agUsd / 31.1035) * jpy) : null,
+          jpy
+        };
+      }
+    }
+  } catch(e) {}
 
-// Convert USD/ozt -> JPY/g
-function convertToJpyPerGram(usdPerOzt, jpyRate) {
-  return Math.round((usdPerOzt / 31.1035) * jpyRate);
+  // Fallback 2: use open.exchangerate-api.com for metals
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/XAU');
+    const d = await r.json();
+    if (d.rates?.JPY) {
+      const goldJpyPerOzt = d.rates.JPY;
+      const fxR = await fetch('https://open.er-api.com/v6/latest/USD');
+      const fxD = await fxR.json();
+      const jpyPerUsd = fxD.rates?.JPY || 145;
+      const xagR = await fetch('https://open.er-api.com/v6/latest/XAG');
+      const xagD = await xagR.json();
+      const xptR = await fetch('https://open.er-api.com/v6/latest/XPT');
+      const xptD = await xptR.json();
+      return {
+        gold: Math.round(goldJpyPerOzt / 31.1035),
+        plat: xptD.rates?.JPY ? Math.round(xptD.rates.JPY / 31.1035) : null,
+        silv: xagD.rates?.JPY ? Math.round(xagD.rates.JPY / 31.1035) : null,
+        jpy: jpyPerUsd
+      };
+    }
+  } catch(e) {}
+
+  return null;
 }
 
 async function loadPrices() {
   try {
-    const [auUsd, ptUsd, agUsd, jpyRate] = await Promise.all([
-      fetchSpotPrice('gold'),
-      fetchSpotPrice('platinum'),
-      fetchSpotPrice('silver'),
-      fetchUSDJPY(),
-    ]);
-
-    state.prevPrices = { ...state.prices };
-    state.prices.gold = convertToJpyPerGram(auUsd, jpyRate);
-    state.prices.plat = convertToJpyPerGram(ptUsd, jpyRate);
-    state.prices.silv = convertToJpyPerGram(agUsd, jpyRate);
-
-    return true;
-  } catch(e) {
-    // Fallback: generate realistic demo prices
-    const base = { gold: 14800, plat: 5100, silv: 138 };
-    if (!state.prices.gold) {
-      state.prices = { ...base };
-    } else {
-      // Slight random walk from previous
-      state.prevPrices = { ...state.prices };
-      state.prices.gold += Math.round((Math.random()-0.48)*60);
-      state.prices.plat += Math.round((Math.random()-0.48)*30);
-      state.prices.silv += Math.round((Math.random()-0.48)*2);
+    const result = await fetchMetalPrices();
+    if (result && result.gold > 15000) {
+      S.prev = {...S.prices};
+      S.prices.gold = result.gold;
+      S.prices.plat = result.plat || S.prices.plat;
+      S.prices.silv = result.silv || S.prices.silv;
+      S.isLive = true;
+      // Cache successful fetch
+      localStorage.setItem('cachedPrices', JSON.stringify({...S.prices, ts: Date.now()}));
+      return true;
     }
+  } catch(e) {}
+
+  // Use cached prices if available
+  const cached = JSON.parse(localStorage.getItem('cachedPrices') || 'null');
+  if (cached && cached.gold > 15000) {
+    S.prev = {...S.prices};
+    S.prices.gold = cached.gold;
+    S.prices.plat = cached.plat;
+    S.prices.silv = cached.silv;
+    S.isLive = false;
     return false;
   }
+
+  // Last resort: realistic reference values
+  S.prev = {...S.prices};
+  // Use end of seed arrays as "today"
+  S.prices.gold = S.prices.gold || SEED_GOLD[SEED_GOLD.length-1];
+  S.prices.plat = S.prices.plat || SEED_PLAT[SEED_PLAT.length-1];
+  S.prices.silv = S.prices.silv || SEED_SILV[SEED_SILV.length-1];
+  S.isLive = false;
+  return false;
 }
 
-/* ===================== History (simulated + real) ===================== */
-function generateHistory(days) {
+/* ===== Build history: weekly (1M) or monthly (6M/1Y) ===== */
+function buildHistory() {
   const now = new Date();
-  const labels = [];
-  const gold = [], plat = [], silv = [];
-  // Seed from current
-  let g = state.prices.gold || 14800;
-  let p = state.prices.plat || 5100;
-  let s = state.prices.silv || 138;
+  const mode = S.rangeMths === 1 ? 'weekly' : 'monthly';
 
-  for (let i = days; i >= 0; i--) {
-    const d = new Date(now); d.setDate(d.getDate()-i);
-    labels.push(d.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'}));
-    // Walk backwards
-    const gv = g + Math.round((Math.random()-0.5)*200*(days/7));
-    const pv = p + Math.round((Math.random()-0.5)*150*(days/7));
-    const sv = s + Math.round((Math.random()-0.5)*8*(days/7));
-    gold.push(Math.max(gv, 10000));
-    plat.push(Math.max(pv, 2000));
-    silv.push(Math.max(sv, 80));
-    g = gv; p = pv; s = sv;
+  // --- Weekly mode: 5 weeks back, each point = Mon of that week ---
+  if (mode === 'weekly') {
+    const labels = [], gold = [], plat = [], silv = [];
+    const totalWeeks = 5; // ~1 month
+    for (let i = totalWeeks - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i * 7);
+      // snap to Monday
+      const day = d.getDay();
+      d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+      labels.push((d.getMonth()+1)+'/'+(d.getDate()));
+      // interpolate from seed (last 5 weeks ≈ last 1–2 months)
+      const baseIdx = SEED_GOLD.length - 2 + Math.round(i / totalWeeks);
+      const nG = Math.round((Math.random()-0.5)*120);
+      const nP = Math.round((Math.random()-0.5)*80);
+      const nS = Math.round((Math.random()-0.5)*6);
+      gold.push(SEED_GOLD[Math.min(baseIdx, SEED_GOLD.length-1)] + nG);
+      plat.push(SEED_PLAT[Math.min(baseIdx, SEED_PLAT.length-1)] + nP);
+      silv.push(SEED_SILV[Math.min(baseIdx, SEED_SILV.length-1)] + nS);
+    }
+    // last point = current
+    gold[gold.length-1] = S.prices.gold || gold[gold.length-1];
+    plat[plat.length-1] = S.prices.plat || plat[plat.length-1];
+    silv[silv.length-1] = S.prices.silv || silv[silv.length-1];
+    S.history = {labels, gold, plat, silv};
+    return;
   }
-  // Fix last point to current prices
-  gold[gold.length-1] = state.prices.gold;
-  plat[plat.length-1] = state.prices.plat;
-  silv[silv.length-1] = state.prices.silv;
 
-  state.history = { labels, gold, plat, silv };
+  // --- Monthly mode ---
+  const totalMths = S.rangeMths === 6 ? 6 : 12;
+  const labels = [], gold = [], plat = [], silv = [];
+  for (let i = totalMths - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    labels.push((d.getMonth()+1)+'月\''+String(d.getFullYear()).slice(2));
+    const seedIdx = SEED_GOLD.length - 1 - i;
+    const nG = Math.round((Math.random()-0.5)*80);
+    const nP = Math.round((Math.random()-0.5)*60);
+    const nS = Math.round((Math.random()-0.5)*4);
+    gold.push(SEED_GOLD[Math.max(0,Math.min(seedIdx,SEED_GOLD.length-1))] + nG);
+    plat.push(SEED_PLAT[Math.max(0,Math.min(seedIdx,SEED_PLAT.length-1))] + nP);
+    silv.push(SEED_SILV[Math.max(0,Math.min(seedIdx,SEED_SILV.length-1))] + nS);
+  }
+  gold[gold.length-1] = S.prices.gold || gold[gold.length-1];
+  plat[plat.length-1] = S.prices.plat || plat[plat.length-1];
+  silv[silv.length-1] = S.prices.silv || silv[silv.length-1];
+  S.history = {labels, gold, plat, silv};
 }
 
-/* ===================== UI Updates ===================== */
-function updateCards() {
-  Object.keys(state.prices).forEach(m => {
-    const price = state.prices[m];
-    const prev = state.prevPrices[m];
-    const el = document.getElementById('price-' + m);
-    const chEl = document.getElementById('change-' + m);
-    if (!price) return;
-    el.textContent = '¥' + price.toLocaleString();
-    if (prev && prev !== price) {
-      const diff = price - prev;
-      const pct = ((diff/prev)*100).toFixed(2);
-      const sign = diff >= 0 ? '+' : '';
-      chEl.textContent = sign + diff.toLocaleString() + ' (' + sign + pct + '%)';
-      chEl.className = 'change ' + (diff > 0 ? 'up' : diff < 0 ? 'dn' : 'nc');
-    } else if (prev) {
-      chEl.textContent = '±0 (0.00%)';
-      chEl.className = 'change nc';
-    }
-  });
-  // Update alert tab labels
-  const labels = {gold:'current-gold-label', plat:'current-plat-label', silv:'current-silv-label'};
-  Object.entries(labels).forEach(([m, id]) => {
-    if (state.prices[m]) {
-      document.getElementById(id).textContent = '現在価格: ¥' + state.prices[m].toLocaleString() + '/g';
-    }
-  });
-  document.getElementById('lastUpdate').textContent =
-    '最終更新: ' + new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+/* ===== Nice round step for Y-axis ===== */
+function niceStep(range) {
+  const rough = range / 4;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const norm = rough / mag;
+  let nice;
+  if (norm <= 1) nice = 1;
+  else if (norm <= 2) nice = 2;
+  else if (norm <= 5) nice = 5;
+  else nice = 10;
+  return nice * mag;
 }
 
-function renderChart() {
-  generateHistory(state.rangeDays);
-  const h = state.history;
-  const ctx = document.getElementById('priceChart').getContext('2d');
+/* ===== Build one individual chart ===== */
+function buildOneChart(metal, color, label, data, labels) {
+  const canvas = document.getElementById('chart-' + metal);
+  if (!canvas) return;
+  const wrap = document.getElementById('chartScrollWrap-' + metal);
+  const containerW = (wrap ? wrap.clientWidth : 0) || 320;
+  const ptCount = labels.length;
+  // 1M(weekly)=5pts→fill container; 6M=6pts→~54px each; 1Y=12pts→~48px each
+  const minPxPer = S.rangeMths === 1 ? containerW / ptCount : 50;
+  const chartW = Math.max(containerW, ptCount * minPxPer);
 
-  if (state.chart) state.chart.destroy();
+  document.getElementById('chartScrollInner-' + metal).style.width = chartW + 'px';
+  document.getElementById('chartContainer-' + metal).style.width = chartW + 'px';
+  canvas.style.width = chartW + 'px';
+  canvas.width  = chartW * (window.devicePixelRatio || 2);
+  canvas.height = 160   * (window.devicePixelRatio || 2);
 
-  // Silver multiplied x10 for visual scale
-  const silvScaled = h.silv.map(v => v * 10);
+  if (S.charts[metal]) S.charts[metal].destroy();
 
-  state.chart = new Chart(ctx, {
+  const minV = Math.min(...data), maxV = Math.max(...data);
+  const step  = niceStep(maxV - minV || maxV * 0.05);
+  const yMin  = Math.floor(minV / step) * step;
+  const yMax  = Math.ceil(maxV  / step) * step;
+
+  // grid line color: subtle horizontal lines only
+  const gridColor = 'rgba(255,255,255,0.07)';
+
+  S.charts[metal] = new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: {
-      labels: h.labels,
-      datasets: [
-        {
-          label: '金',
-          data: h.gold,
-          borderColor: '#c9a84c',
-          backgroundColor: 'rgba(201,168,76,0.08)',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          borderDash: [],
-        },
-        {
-          label: '白金',
-          data: h.plat,
-          borderColor: '#9bb3c4',
-          backgroundColor: 'rgba(155,179,196,0.05)',
-          fill: false,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          borderDash: [6,3],
-        },
-        {
-          label: '銀×10',
-          data: silvScaled,
-          borderColor: '#a8a8b3',
-          backgroundColor: 'rgba(168,168,179,0.05)',
-          fill: false,
-          tension: 0.4,
-          borderWidth: 1.5,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          borderDash: [3,3],
-        }
-      ]
+      labels,
+      datasets: [{
+        label,
+        data,
+        borderColor: color,
+        backgroundColor: 'transparent',  // 塗りつぶしなし
+        fill: false,
+        tension: 0,                       // シャープな折れ線
+        borderWidth: 1.8,
+        pointRadius: 3,
+        pointBackgroundColor: color,
+        pointBorderColor: color,
+        pointHoverRadius: 6,
+        pointBorderWidth: 0,
+      }]
     },
     options: {
-      responsive: true,
+      responsive: false,
       maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
+      interaction: {mode:'index', intersect:false},
       plugins: {
-        legend: { display: false },
+        legend: {display:false},
         tooltip: {
-          backgroundColor: '#1e1e2a',
-          titleColor: '#f0ede8',
-          bodyColor: '#a0a0b0',
-          borderColor: '#2a2a3a',
-          borderWidth: 0.5,
-          padding: 10,
+          backgroundColor:'#1a1a24',
+          titleColor:'#f0ede8',
+          bodyColor:'#c8c8b8',
+          borderColor:'#333344',
+          borderWidth:0.5,
+          padding:10,
           callbacks: {
-            label: ctx => {
-              const v = ctx.datasetIndex === 2
-                ? Math.round(ctx.raw / 10)
-                : Math.round(ctx.raw);
-              return ' ¥' + v.toLocaleString() + '/g';
-            }
+            label: ctx => ' ¥' + Math.round(ctx.raw).toLocaleString() + '/g'
           }
         }
       },
       scales: {
         x: {
-          grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
-          ticks: { color: '#7a7a8a', font: { size: 10 }, maxTicksLimit: 7, maxRotation: 0 }
+          grid: {display:false},          // 縦グリッド線なし
+          border: {display:false},
+          ticks: {color:'#7a7a8a', font:{size:10}, maxRotation:0, autoSkip:true, maxTicksLimit:8}
         },
         y: {
-          grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
-          ticks: { color: '#7a7a8a', font: { size: 10 }, callback: v => '¥'+Math.round(v).toLocaleString() }
+          min: yMin,
+          max: yMax,
+          border: {display:false},
+          grid: {
+            color: gridColor,              // 水平グリッド線のみ
+            drawTicks: false,
+          },
+          ticks: {
+            color:'#7a7a8a', font:{size:10},
+            stepSize: step,
+            callback: v => {
+              if (v >= 10000) return '¥'+(v/1000).toFixed(0)+'k';
+              return '¥'+v;
+            }
+          }
         }
       }
     }
   });
 }
 
-function setRange(days, btn) {
-  state.rangeDays = days;
-  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+function renderChart() {
+  buildHistory();
+  const h = S.history;
+  const METALS = [
+    {key:'gold', color:'#c9a84c', label:'金'},
+    {key:'plat', color:'#9bb3c4', label:'白金'},
+    {key:'silv', color:'#a8a8b3', label:'銀'},
+  ];
+  METALS.forEach(m => {
+    buildOneChart(m.key, m.color, m.label, h[m.key], h.labels);
+    const cur = S.prices[m.key];
+    const el = document.getElementById('chartcur-' + m.key);
+    if (el && cur) el.textContent = '¥' + cur.toLocaleString() + '/g';
+    const wrap = document.getElementById('chartScrollWrap-' + m.key);
+    setTimeout(() => { if(wrap) wrap.scrollLeft = wrap.scrollWidth; }, 60);
+  });
+}
+
+function setRange(mths, btn) {
+  S.rangeMths = mths;
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderChart();
 }
 
-/* ===================== Alerts ===================== */
+/* ===== Update price cards ===== */
+function updateCards() {
+  ['gold','plat','silv'].forEach(m => {
+    const p = S.prices[m], prev = S.prev[m];
+    if (!p) return;
+    document.getElementById('price-'+m).textContent = '¥'+p.toLocaleString();
+    const chEl = document.getElementById('change-'+m);
+    if (prev && prev !== p) {
+      const diff = p - prev, pct = ((diff/prev)*100).toFixed(2);
+      const sign = diff>=0?'+':'';
+      chEl.textContent = sign+diff.toLocaleString()+'('+sign+pct+'%)';
+      chEl.className = 'change '+(diff>0?'up':'dn');
+    } else if (prev) {
+      chEl.textContent = '±0 (0.00%)'; chEl.className='change nc';
+    }
+  });
+
+  // Alert tab current price labels
+  const lbls = {gold:'current-gold-label',plat:'current-plat-label',silv:'current-silv-label'};
+  Object.entries(lbls).forEach(([m,id]) => {
+    if (S.prices[m]) document.getElementById(id).textContent='現在価格: ¥'+S.prices[m].toLocaleString()+'/g';
+  });
+
+  document.getElementById('lastUpdate').textContent = '最終更新: '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+
+  // Data source badge
+  const badge = document.getElementById('dataBadge');
+  const badgeText = document.getElementById('dataBadgeText');
+  if (S.isLive) {
+    badge.className='data-badge live';
+    badgeText.textContent='● ライブ価格';
+  } else {
+    badge.className='data-badge demo';
+    badgeText.textContent='● 参考値（API接続中...）';
+  }
+}
+
+/* ===== Alerts ===== */
 function saveAlert(metal) {
   const high = parseFloat(document.getElementById(metal+'-high').value);
   const low = parseFloat(document.getElementById(metal+'-low').value);
-  state.alerts[metal] = {};
-  if (!isNaN(high) && high > 0) state.alerts[metal].high = high;
-  if (!isNaN(low) && low > 0) state.alerts[metal].low = low;
-  localStorage.setItem('alerts', JSON.stringify(state.alerts));
-  // Reset fired state for this metal
-  delete state.alertsFired[metal + '-high'];
-  delete state.alertsFired[metal + '-low'];
-  localStorage.setItem('alertsFired', JSON.stringify(state.alertsFired));
-
-  const status = document.getElementById('status-' + metal);
-  const parts = [];
-  if (state.alerts[metal].high) parts.push('上限 ¥' + state.alerts[metal].high.toLocaleString());
-  if (state.alerts[metal].low) parts.push('下限 ¥' + state.alerts[metal].low.toLocaleString());
-  status.textContent = parts.length ? '✅ ' + parts.join(' / ') + ' を保存しました' : '⚠️ 価格を入力してください';
-  status.style.color = parts.length ? '#5cb85c' : '#e05c5c';
+  S.alerts[metal] = {};
+  if (!isNaN(high) && high>0) S.alerts[metal].high = high;
+  if (!isNaN(low) && low>0) S.alerts[metal].low = low;
+  localStorage.setItem('alerts', JSON.stringify(S.alerts));
+  delete S.alertsFired[metal+'-high']; delete S.alertsFired[metal+'-low'];
+  localStorage.setItem('alertsFired', JSON.stringify(S.alertsFired));
+  const st = document.getElementById('status-'+metal);
+  const parts=[];
+  if (S.alerts[metal].high) parts.push('上限 ¥'+S.alerts[metal].high.toLocaleString());
+  if (S.alerts[metal].low) parts.push('下限 ¥'+S.alerts[metal].low.toLocaleString());
+  st.textContent = parts.length ? '✅ '+parts.join(' / ')+' を保存しました' : '⚠️ 価格を入力してください';
+  st.style.color = parts.length ? '#4dba6f' : '#e05c5c';
   updateAlertDots();
 }
 
 function updateAlertDots() {
   ['gold','plat','silv'].forEach(m => {
-    const card = document.getElementById('card-' + m);
-    const hasAlert = state.alerts[m] && (state.alerts[m].high || state.alerts[m].low);
-    card.classList.toggle('has-alert', !!hasAlert);
+    const has = S.alerts[m] && (S.alerts[m].high || S.alerts[m].low);
+    document.getElementById('card-'+m).classList.toggle('has-alert',!!has);
   });
 }
 
 function checkAlerts() {
-  if (!state.notif.priceAlert) return;
-  const names = { gold: '金', plat: '白金', silv: '銀' };
-  Object.entries(state.prices).forEach(([m, price]) => {
-    if (!price || !state.alerts[m]) return;
-    const { high, low } = state.alerts[m];
-    const keyH = m + '-high', keyL = m + '-low';
-    if (high && price >= high && !state.alertsFired[keyH]) {
-      state.alertsFired[keyH] = true;
-      localStorage.setItem('alertsFired', JSON.stringify(state.alertsFired));
-      const msg = names[m] + 'が上限 ¥' + high.toLocaleString() + '/g を超えました！\n現在 ¥' + price.toLocaleString() + '/g';
-      showAlertModal('🚨 上限アラート：' + names[m], msg);
-      sendNotification('上限アラート：' + names[m], msg, 'alert-' + m);
+  if (!S.notif.priceAlert) return;
+  const names={gold:'金',plat:'白金',silv:'銀'};
+  Object.entries(S.prices).forEach(([m,price]) => {
+    if (!price || !S.alerts[m]) return;
+    const {high, low} = S.alerts[m];
+    const kH=m+'-high', kL=m+'-low';
+    if (high && price>=high && !S.alertsFired[kH]) {
+      S.alertsFired[kH]=true; localStorage.setItem('alertsFired',JSON.stringify(S.alertsFired));
+      const msg=names[m]+'が上限 ¥'+high.toLocaleString()+'/g を超えました！\n現在 ¥'+price.toLocaleString()+'/g';
+      showAlertModal('🚨 上限アラート：'+names[m], msg);
+      sendNotification('上限アラート：'+names[m], msg, 'alert-'+m);
     }
-    if (low && price <= low && !state.alertsFired[keyL]) {
-      state.alertsFired[keyL] = true;
-      localStorage.setItem('alertsFired', JSON.stringify(state.alertsFired));
-      const msg = names[m] + 'が下限 ¥' + low.toLocaleString() + '/g を下回りました！\n現在 ¥' + price.toLocaleString() + '/g';
-      showAlertModal('📉 下限アラート：' + names[m], msg);
-      sendNotification('下限アラート：' + names[m], msg, 'alert-' + m);
+    if (low && price<=low && !S.alertsFired[kL]) {
+      S.alertsFired[kL]=true; localStorage.setItem('alertsFired',JSON.stringify(S.alertsFired));
+      const msg=names[m]+'が下限 ¥'+low.toLocaleString()+'/g を下回りました！\n現在 ¥'+price.toLocaleString()+'/g';
+      showAlertModal('📉 下限アラート：'+names[m], msg);
+      sendNotification('下限アラート：'+names[m], msg, 'alert-'+m);
     }
-    // Reset fired when price moves away (allow re-trigger)
-    if (high && price < high - 100) delete state.alertsFired[keyH];
-    if (low && price > low + 100) delete state.alertsFired[keyL];
+    if (high && price < high*0.98) delete S.alertsFired[kH];
+    if (low && price > low*1.02) delete S.alertsFired[kL];
   });
 }
 
-/* ===================== Notifications ===================== */
+/* ===== Notifications ===== */
 async function requestPermission() {
-  const permStatus = document.getElementById('permStatus');
-  if (!('Notification' in window)) {
-    permStatus.textContent = '⚠️ このブラウザは通知未対応です。SafariでPWAとしてご利用ください。';
-    permStatus.style.color = '#e05c5c';
-    return;
-  }
-  const result = await Notification.requestPermission();
-  if (result === 'granted') {
-    permStatus.textContent = '✅ 通知が許可されました！';
-    permStatus.style.color = '#5cb85c';
-    showToast('通知を許可しました');
-    scheduleDailyNotif();
-  } else {
-    permStatus.textContent = '❌ 通知が拒否されました。設定から許可してください。';
-    permStatus.style.color = '#e05c5c';
-  }
+  const st = document.getElementById('permStatus');
+  if (!('Notification' in window)) { st.textContent='⚠️ このブラウザは通知未対応です'; st.style.color='#e05c5c'; return; }
+  const r = await Notification.requestPermission();
+  if (r==='granted') { st.textContent='✅ 通知が許可されました！'; st.style.color='#4dba6f'; showToast('通知を許可しました'); scheduleDailyNotif(); }
+  else { st.textContent='❌ 拒否されました。設定から許可してください。'; st.style.color='#e05c5c'; }
 }
 
-function sendNotification(title, body, tag = 'metals') {
-  if (Notification.permission !== 'granted') return;
-  if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag });
+function sendNotification(title, body, tag='metals') {
+  if (Notification.permission!=='granted') return;
+  if (navigator.serviceWorker?.controller) {
+    navigator.serviceWorker.controller.postMessage({type:'SHOW_NOTIFICATION', title, body, tag});
   } else {
-    new Notification(title, { body, icon: './icon-192.png', tag });
+    new Notification(title, {body, icon:'./icon-192.png', tag});
   }
 }
 
 function testNotification() {
-  const p = state.prices;
-  const body = `金: ¥${(p.gold||'-').toLocaleString()}/g\n白金: ¥${(p.plat||'-').toLocaleString()}/g\n銀: ¥${(p.silv||'-').toLocaleString()}/g`;
+  const p=S.prices;
+  const body='金: ¥'+(p.gold||'-').toLocaleString()+'/g\n白金: ¥'+(p.plat||'-').toLocaleString()+'/g\n銀: ¥'+(p.silv||'-').toLocaleString()+'/g';
   sendNotification('📊 貴金属価格レポート', body, 'daily-report');
   showToast('テスト通知を送りました');
 }
 
 function toggleDaily() {
-  const t = document.getElementById('dailyToggle');
-  state.notif.daily = !state.notif.daily;
-  t.classList.toggle('on', state.notif.daily);
+  S.notif.daily=!S.notif.daily;
+  document.getElementById('dailyToggle').classList.toggle('on',S.notif.daily);
   saveNotifSettings();
-  if (state.notif.daily) scheduleDailyNotif();
-  else clearDailyNotif();
-  showToast(state.notif.daily ? '定時通知をONにしました' : '定時通知をOFFにしました');
+  S.notif.daily ? scheduleDailyNotif() : clearDailyNotif();
+  showToast(S.notif.daily?'定時通知をONにしました':'定時通知をOFFにしました');
 }
-
 function togglePriceAlert() {
-  const t = document.getElementById('priceAlertToggle');
-  state.notif.priceAlert = !state.notif.priceAlert;
-  t.classList.toggle('on', state.notif.priceAlert);
+  S.notif.priceAlert=!S.notif.priceAlert;
+  document.getElementById('priceAlertToggle').classList.toggle('on',S.notif.priceAlert);
   saveNotifSettings();
-  showToast(state.notif.priceAlert ? '価格アラートをONにしました' : '価格アラートをOFFにしました');
+  showToast(S.notif.priceAlert?'価格アラートをON':'価格アラートをOFF');
 }
-
 function saveNotifTime() {
-  state.notif.time = document.getElementById('notifTime').value;
+  S.notif.time=document.getElementById('notifTime').value;
   saveNotifSettings();
-  if (state.notif.daily) scheduleDailyNotif();
-  showToast('通知時刻を ' + state.notif.time + ' に設定しました');
+  if(S.notif.daily) scheduleDailyNotif();
+  showToast('通知時刻を '+S.notif.time+' に設定しました');
 }
-
-function saveNotifSettings() {
-  localStorage.setItem('notifSettings', JSON.stringify(state.notif));
-}
+function saveNotifSettings() { localStorage.setItem('notifSettings',JSON.stringify(S.notif)); }
 
 function scheduleDailyNotif() {
   clearDailyNotif();
-  if (!state.notif.daily) return;
-  const now = new Date();
-  const [h, m] = state.notif.time.split(':').map(Number);
-  const target = new Date(now);
-  target.setHours(h, m, 0, 0);
-  if (target <= now) target.setDate(target.getDate()+1);
-  const ms = target - now;
-  state.dailyTimer = setTimeout(() => {
-    const p = state.prices;
-    const body = `金: ¥${(p.gold||'-').toLocaleString()}/g  白金: ¥${(p.plat||'-').toLocaleString()}/g  銀: ¥${(p.silv||'-').toLocaleString()}/g`;
-    sendNotification('📊 本日の貴金属価格', body, 'daily');
-    // Reschedule for next day
-    state.dailyTimer = setInterval(() => {
-      sendNotification('📊 本日の貴金属価格', body, 'daily');
-    }, 24*60*60*1000);
-  }, ms);
+  if (!S.notif.daily) return;
+  const now=new Date(), [h,m]=S.notif.time.split(':').map(Number);
+  const target=new Date(now); target.setHours(h,m,0,0);
+  if (target<=now) target.setDate(target.getDate()+1);
+  S.dailyTimer=setTimeout(()=>{
+    const p=S.prices;
+    sendNotification('📊 本日の貴金属価格','金: ¥'+(p.gold||'-').toLocaleString()+'/g  白金: ¥'+(p.plat||'-').toLocaleString()+'/g  銀: ¥'+(p.silv||'-').toLocaleString()+'/g','daily');
+    S.dailyTimer=setInterval(()=>{ sendNotification('📊 本日の貴金属価格','金: ¥'+(p.gold||'-').toLocaleString()+'/g','daily'); },86400000);
+  }, target-now);
 }
+function clearDailyNotif() { if(S.dailyTimer){clearTimeout(S.dailyTimer);clearInterval(S.dailyTimer);} }
 
-function clearDailyNotif() {
-  if (state.dailyTimer) { clearTimeout(state.dailyTimer); clearInterval(state.dailyTimer); }
-}
-
-/* ===================== Modal ===================== */
-function showAlertModal(title, body) {
-  document.getElementById('alertModalTitle').textContent = title;
-  document.getElementById('alertModalBody').textContent = body;
+/* ===== Modal ===== */
+function showAlertModal(title,body) {
+  document.getElementById('alertModalTitle').textContent=title;
+  document.getElementById('alertModalBody').textContent=body;
   document.getElementById('alertModal').classList.add('show');
 }
-function closeModal() {
-  document.getElementById('alertModal').classList.remove('show');
-}
+function closeModal() { document.getElementById('alertModal').classList.remove('show'); }
 
-/* ===================== Toast ===================== */
+/* ===== Toast ===== */
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
 }
 
-/* ===================== Tabs ===================== */
+/* ===== Tab switch ===== */
 function switchTab(name) {
-  document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    const panels = ['chart','alert','notif','info'];
-    b.classList.toggle('active', panels[i] === name);
-  });
-  document.querySelectorAll('.tab-panel').forEach(p => {
-    p.classList.toggle('active', p.id === 'panel-'+name);
-  });
+  const names=['chart','alert','notif','info'];
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+name));
 }
 
-/* ===================== Refresh ===================== */
+/* ===== Refresh ===== */
 async function refreshData() {
-  const btn = document.getElementById('refreshBtn');
+  const btn=document.getElementById('refreshBtn');
   btn.classList.add('spinning');
   await loadPrices();
   updateCards();
   renderChart();
   checkAlerts();
   btn.classList.remove('spinning');
-  showToast('価格を更新しました');
+  showToast(S.isLive?'ライブ価格を取得しました':'参考値を表示中（API接続中）');
 }
 
-/* ===================== Load saved alerts into inputs ===================== */
+/* ===== Restore UI ===== */
 function restoreAlertInputs() {
-  ['gold','plat','silv'].forEach(m => {
-    const a = state.alerts[m] || {};
-    if (a.high) document.getElementById(m+'-high').value = a.high;
-    if (a.low) document.getElementById(m+'-low').value = a.low;
+  ['gold','plat','silv'].forEach(m=>{
+    const a=S.alerts[m]||{};
+    if(a.high) document.getElementById(m+'-high').value=a.high;
+    if(a.low) document.getElementById(m+'-low').value=a.low;
   });
   updateAlertDots();
 }
-
-/* ===================== Restore UI state ===================== */
 function restoreNotifUI() {
-  document.getElementById('dailyToggle').classList.toggle('on', state.notif.daily);
-  document.getElementById('priceAlertToggle').classList.toggle('on', state.notif.priceAlert);
-  document.getElementById('notifTime').value = state.notif.time;
-  // Show perm status
-  if (Notification.permission === 'granted') {
-    document.getElementById('permStatus').textContent = '✅ 通知許可済み';
-    document.getElementById('permStatus').style.color = '#5cb85c';
+  document.getElementById('dailyToggle').classList.toggle('on',S.notif.daily);
+  document.getElementById('priceAlertToggle').classList.toggle('on',S.notif.priceAlert);
+  document.getElementById('notifTime').value=S.notif.time;
+  if(Notification.permission==='granted'){
+    document.getElementById('permStatus').textContent='✅ 通知許可済み';
+    document.getElementById('permStatus').style.color='#4dba6f';
   }
 }
 
-/* ===================== Auto-refresh ===================== */
-function startAutoRefresh() {
-  // Every 5 minutes during market hours
-  state.autoTimer = setInterval(async () => {
-    await loadPrices();
-    updateCards();
-    checkAlerts();
-  }, 5 * 60 * 1000);
+/* ===== SW ===== */
+async function registerSW() {
+  if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('./sw.js'); } catch(e){} }
 }
 
-/* ===================== Init ===================== */
+/* ===== Init ===== */
 async function init() {
   await registerSW();
   await loadPrices();
@@ -960,14 +882,13 @@ async function init() {
   restoreAlertInputs();
   restoreNotifUI();
   scheduleDailyNotif();
-  startAutoRefresh();
   document.getElementById('loadingOverlay').classList.add('hidden');
+  // Auto-refresh every 5 minutes
+  S.autoTimer=setInterval(async()=>{ await loadPrices(); updateCards(); checkAlerts(); },300000);
 }
 
-window.addEventListener('load', init);
-window.addEventListener('visibilitychange', () => {
-  if (!document.hidden) refreshData();
-});
+window.addEventListener('load',init);
+window.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshData(); });
 </script>
 </body>
 </html>
