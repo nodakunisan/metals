@@ -82,7 +82,7 @@ body{
 .pb-name{font-size:9px;color:var(--muted);margin-bottom:4px;white-space:nowrap}
 .pb-price{font-size:14px;font-weight:800;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pb-unit{font-size:8px;color:var(--muted);margin-top:2px}
-.pb-change{font-size:9px;font-weight:600;margin-top:3px;white-space:nowrap}
+.pb-change{font-size:10px;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pb-change.up{color:#4dba6f}.pb-change.dn{color:#e05c5c}.pb-change.nc{color:var(--muted)}
 .alert-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#e05c5c;display:none}
 .pb-card.has-alert .alert-dot{display:block}
@@ -448,10 +448,10 @@ function updateCards() {
     const el = document.getElementById('change-'+m);
     if (el && prev && prev !== p) {
       const diff = p - prev, pct = ((diff/prev)*100).toFixed(2), sign = diff>=0?'+':'';
-      el.textContent = sign+diff.toLocaleString()+'('+sign+pct+'%)';
+      el.textContent = sign+diff.toLocaleString()+'円('+sign+pct+'%)';
       el.className = 'pb-change '+(diff>0?'up':'dn');
     } else if (el) {
-      el.textContent = '±0 (0.00%)';
+      el.textContent = '±0円 (0.00%)';
       el.className = 'pb-change nc';
     }
   });
@@ -578,8 +578,8 @@ function buildChart(metal, color, data, labels) {
           borderColor:'rgba(200,160,60,0.5)',
           borderWidth:1,
           padding:{top:12,bottom:12,left:16,right:16},
-          titleFont:{size:20, weight:'bold'},
-          bodyFont:{size:72, weight:'bold'},  // ★ 最大サイズ
+          titleFont:{size:14, weight:'bold'},
+          bodyFont:{size:24, weight:'bold'},
           displayColors:false,
           callbacks:{
             title: ctx => ctx[0].label,
@@ -786,7 +786,7 @@ async function refreshData(){
     S.prev={...S.prices};
     S.prices.gold=result.gold; S.prices.plat=result.plat; S.prices.silv=result.silv;
     S.isLive=true;
-    try{localStorage.setItem('cachedPrices',JSON.stringify({...S.prices,ts:Date.now()}));}catch(e){}
+    try{localStorage.setItem('cachedPrices',JSON.stringify({...S.prices,prev:S.prev,ts:Date.now()}));}catch(e){}
     const b=document.getElementById('dataBadge');
     if(b){b.className='data-badge live';b.textContent='● ライブ価格';}
     showToast('ライブ価格を取得しました');
@@ -816,12 +816,28 @@ function init(){
     if(cached&&cached.gold>10000){
       S.prices.gold=cached.gold; S.prices.plat=cached.plat||SEED_PLAT[SEED_PLAT.length-1];
       S.prices.silv=cached.silv||SEED_SILV[SEED_SILV.length-1];
+      // 前回価格を復元（前日比表示に使用）
+      if(cached.prev&&cached.prev.gold>10000){
+        S.prev.gold=cached.prev.gold;
+        S.prev.plat=cached.prev.plat||0;
+        S.prev.silv=cached.prev.silv||0;
+      } else {
+        // 初回：前日比をシードから推定（1日前≒1つ前のデータ）
+        const si=SEED_GOLD.length-2;
+        S.prev.gold=SEED_GOLD[si]; S.prev.plat=SEED_PLAT[si]; S.prev.silv=SEED_SILV[si];
+      }
     } else {
       S.prices.gold=SEED_GOLD[SEED_GOLD.length-1];
       S.prices.plat=SEED_PLAT[SEED_PLAT.length-1];
       S.prices.silv=SEED_SILV[SEED_SILV.length-1];
+      // 初回：前日比をシードから推定
+      const si=SEED_GOLD.length-2;
+      S.prev.gold=SEED_GOLD[si]; S.prev.plat=SEED_PLAT[si]; S.prev.silv=SEED_SILV[si];
     }
-  }catch(e){S.prices={gold:22151,plat:9052,silv:344};}
+  }catch(e){
+    S.prices={gold:22151,plat:9052,silv:344};
+    S.prev={gold:21800,plat:8950,silv:340};
+  }
 
   // 即座に表示
   try{updateCards();}catch(e){console.warn(e);}
@@ -836,7 +852,7 @@ function init(){
       S.prev={...S.prices};
       S.prices.gold=result.gold; S.prices.plat=result.plat; S.prices.silv=result.silv;
       S.isLive=true;
-      try{localStorage.setItem('cachedPrices',JSON.stringify({...S.prices,ts:Date.now()}));}catch(e){}
+      try{localStorage.setItem('cachedPrices',JSON.stringify({...S.prices,prev:S.prev,ts:Date.now()}));}catch(e){}
       const b=document.getElementById('dataBadge');
       if(b){b.className='data-badge live';b.textContent='● ライブ価格';}
       try{updateCards();}catch(e){}
