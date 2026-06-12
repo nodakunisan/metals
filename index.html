@@ -388,6 +388,80 @@ const SEED_PLAT = [4820,4760,4690,4720,4850,5000,5120,5200,5350,5500,5800,6100,6
 const SEED_SILV = [185,188,190,196,204,210,218,222,228,235,248,260,270,285,302,315,325,338,350,358,365,372,360,344];
 
 /* ══════════════════════════════════════════════
+   ユーティリティ
+══════════════════════════════════════════════ */
+// 日本時間の今日の日付文字列 "YYYY-MM-DD" を返す
+function todayJST(){
+  const d = new Date(Date.now() + 9*60*60*1000); // UTC+9
+  return d.toISOString().slice(0,10);
+}
+
+/* ══════════════════════════════════════════════
+   前日比管理
+══════════════════════════════════════════════ */
+// 前日比の基準価格をS.prevにセットする
+// todayOpen = {gold, plat, silv, date} : その日の最初の価格
+function setupPrevPrice(){
+  try{
+    const today = todayJST();
+    const todayOpen = JSON.parse(localStorage.getItem('todayOpen')||'null');
+
+    if(!todayOpen || todayOpen.date !== today){
+      // 日付が変わった（または初回）
+      // → キャッシュの価格を「前日終値」としてS.prevに入れる
+      const cached = JSON.parse(localStorage.getItem('cachedPrices')||'null');
+      if(cached && cached.gold > 10000){
+        S.prev.gold = cached.gold;
+        S.prev.plat = cached.plat || SEED_PLAT[SEED_PLAT.length-1];
+        S.prev.silv = cached.silv || SEED_SILV[SEED_SILV.length-1];
+      } else {
+        // 初回：シードの前日値
+        const si = SEED_GOLD.length-2;
+        S.prev.gold = SEED_GOLD[si]; S.prev.plat = SEED_PLAT[si]; S.prev.silv = SEED_SILV[si];
+      }
+      // 今日の最初の価格を記録（APIで更新後に上書きされる）
+      localStorage.setItem('todayOpen', JSON.stringify({
+        gold: S.prices.gold, plat: S.prices.plat, silv: S.prices.silv, date: today
+      }));
+    } else {
+      // 同日 → todayOpenより前の価格が前日終値として保存済み
+      // S.prevはキャッシュから復元
+      const prevSaved = JSON.parse(localStorage.getItem('prevClose')||'null');
+      if(prevSaved && prevSaved.gold > 10000){
+        S.prev.gold = prevSaved.gold; S.prev.plat = prevSaved.plat; S.prev.silv = prevSaved.silv;
+      } else {
+        // フォールバック：todayOpenを基準に（当日内変動）
+        S.prev.gold = todayOpen.gold; S.prev.plat = todayOpen.plat; S.prev.silv = todayOpen.silv;
+      }
+    }
+  }catch(e){
+    const si = SEED_GOLD.length-2;
+    S.prev = {gold:SEED_GOLD[si], plat:SEED_PLAT[si], silv:SEED_SILV[si]};
+  }
+}
+
+// APIで最新価格取得成功時に前日比情報を更新する
+function updatePrevOnFetch(newPrices){
+  try{
+    const today = todayJST();
+    const todayOpen = JSON.parse(localStorage.getItem('todayOpen')||'null');
+
+    if(!todayOpen || todayOpen.date !== today){
+      // 日付が変わった → 現在のキャッシュ価格が前日終値
+      localStorage.setItem('prevClose', JSON.stringify({
+        gold: S.prices.gold, plat: S.prices.plat, silv: S.prices.silv
+      }));
+      S.prev.gold = S.prices.gold; S.prev.plat = S.prices.plat; S.prev.silv = S.prices.silv;
+      // 今日のオープン価格を新規登録
+      localStorage.setItem('todayOpen', JSON.stringify({
+        gold: newPrices.gold, plat: newPrices.plat, silv: newPrices.silv, date: today
+      }));
+    }
+    // 同日は S.prev を変えない
+  }catch(e){}
+}
+
+/* ══════════════════════════════════════════════
    State
 ══════════════════════════════════════════════ */
 const S = {
@@ -651,6 +725,15 @@ function buildChart(metal, color, data, labels) {
 function renderChart() {
   buildHistory();
   const h = S.history;
+
+  // ★ チャートの前日値（後ろから2番目）をS.prevにセット → 前日比と完全一致
+  const n = h.gold.length;
+  if (n >= 2) {
+    S.prev.gold = h.gold[n-2];
+    S.prev.plat = h.plat[n-2];
+    S.prev.silv = h.silv[n-2];
+  }
+
   const METALS = [
     {key:'gold',color:'#c9a84c'},
     {key:'plat',color:'#9bb3c4'},
@@ -661,11 +744,12 @@ function renderChart() {
     const sw = document.getElementById('sw-'+m.key);
     setTimeout(()=>{ if(sw) sw.scrollLeft=sw.scrollWidth; },80);
   });
-  // 現在価格をタイトル横に反映
+  // 現在価格をタイトル横に反映 & 前日比も更新
   ['gold','plat','silv'].forEach(m=>{
     const el=document.getElementById('cur-'+m);
     if(el && S.prices[m]) el.textContent='¥'+S.prices[m].toLocaleString()+'/g';
   });
+  updateCards(); // 前日比を再描画
 }
 
 function setRange(mths, btn) {
@@ -818,14 +902,7 @@ async function refreshData(){
   btn.classList.add('spinning');
   const result = await fetchPrices();
   if(result){
-    try{
-      const today=new Date().toISOString().slice(0,10);
-      const prevDay=JSON.parse(localStorage.getItem('prevDayPrices')||'null');
-      if(!prevDay||prevDay.date!==today){
-        localStorage.setItem('prevDayPrices',JSON.stringify({gold:S.prices.gold,plat:S.prices.plat,silv:S.prices.silv,date:today}));
-        S.prev.gold=S.prices.gold; S.prev.plat=S.prices.plat; S.prev.silv=S.prices.silv;
-      }
-    }catch(e){}
+    updatePrevOnFetch(result);
     S.prices.gold=result.gold; S.prices.plat=result.plat; S.prices.silv=result.silv;
     S.isLive=true;
     try{localStorage.setItem('cachedPrices',JSON.stringify({...S.prices,ts:Date.now()}));}catch(e){}
@@ -867,29 +944,8 @@ function init(){
     S.prices={gold:22151,plat:9052,silv:344};
   }
 
-  // 前日比：専用ストレージから取得
-  // "prevDay" = {gold, plat, silv, date:"YYYY-MM-DD"} 形式
-  try{
-    const today = new Date().toISOString().slice(0,10); // "2026-06-11"
-    const prevDay = JSON.parse(localStorage.getItem('prevDayPrices')||'null');
-    if(prevDay && prevDay.gold>10000 && prevDay.date !== today){
-      // 日付が変わっている → 真の前日価格
-      S.prev.gold=prevDay.gold; S.prev.plat=prevDay.plat; S.prev.silv=prevDay.silv;
-    } else if(prevDay && prevDay.gold>10000){
-      // 同日 → 当日の最初に記録された価格（日中比）
-      S.prev.gold=prevDay.gold; S.prev.plat=prevDay.plat; S.prev.silv=prevDay.silv;
-    } else {
-      // 初回：シード前日値を使用
-      const si=SEED_GOLD.length-2;
-      S.prev.gold=SEED_GOLD[si]; S.prev.plat=SEED_PLAT[si]; S.prev.silv=SEED_SILV[si];
-      // 今日分として記録
-      const todayPrices={gold:S.prices.gold,plat:S.prices.plat,silv:S.prices.silv,date:today};
-      localStorage.setItem('prevDayPrices',JSON.stringify(todayPrices));
-    }
-  }catch(e){
-    const si=SEED_GOLD.length-2;
-    S.prev={gold:SEED_GOLD[si],plat:SEED_PLAT[si],silv:SEED_SILV[si]};
-  }
+  // 前日比の基準価格をセット
+  setupPrevPrice();
 
   // 即座に表示
   try{updateCards();}catch(e){console.warn(e);}
@@ -901,16 +957,7 @@ function init(){
   // バックグラウンドでAPI取得
   fetchPrices().then(result=>{
     if(result){
-      // 日付チェック：日付が変わっていれば現在価格を前日価格として保存
-      try{
-        const today=new Date().toISOString().slice(0,10);
-        const prevDay=JSON.parse(localStorage.getItem('prevDayPrices')||'null');
-        if(!prevDay || prevDay.date!==today){
-          // 新しい日になった → 今の価格（API取得前）を前日終値として保存
-          localStorage.setItem('prevDayPrices',JSON.stringify({gold:S.prices.gold,plat:S.prices.plat,silv:S.prices.silv,date:today}));
-          S.prev.gold=S.prices.gold; S.prev.plat=S.prices.plat; S.prev.silv=S.prices.silv;
-        }
-      }catch(e){}
+      updatePrevOnFetch(result);
       S.prices.gold=result.gold; S.prices.plat=result.plat; S.prices.silv=result.silv;
       S.isLive=true;
       try{localStorage.setItem('cachedPrices',JSON.stringify({...S.prices,ts:Date.now()}));}catch(e){}
@@ -922,11 +969,15 @@ function init(){
     }
   }).catch(()=>{});
 
-  // 5分ごと自動更新
+  // 5分ごと自動更新（S.prevは変えない＝前日比を維持）
   setInterval(()=>{
     fetchPrices().then(r=>{
-      if(r){ S.prev={...S.prices}; S.prices.gold=r.gold; S.prices.plat=r.plat; S.prices.silv=r.silv; S.isLive=true;
-        try{updateCards();}catch(e){} try{checkAlerts();}catch(e){} }
+      if(r){
+        // 日付チェック：日付が変わっていれば現在価格を前日終値として保存
+        updatePrevOnFetch(r);
+        S.prices.gold=r.gold; S.prices.plat=r.plat; S.prices.silv=r.silv; S.isLive=true;
+        try{updateCards();}catch(e){} try{checkAlerts();}catch(e){}
+      }
     }).catch(()=>{});
   },300000);
 
@@ -958,8 +1009,11 @@ if(document.readyState==='loading'){
 window.addEventListener('visibilitychange',()=>{
   if(!document.hidden){
     fetchPrices().then(r=>{
-      if(r){ S.prev={...S.prices}; S.prices.gold=r.gold; S.prices.plat=r.plat; S.prices.silv=r.silv; S.isLive=true;
-        try{updateCards();}catch(e){} try{checkAlerts();}catch(e){} }
+      if(r){
+        updatePrevOnFetch(r);
+        S.prices.gold=r.gold; S.prices.plat=r.plat; S.prices.silv=r.silv; S.isLive=true;
+        try{updateCards();}catch(e){} try{checkAlerts();}catch(e){}
+      }
     }).catch(()=>{});
   }
 });
