@@ -192,21 +192,21 @@ body{
     <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">↻</button>
   </div>
   <div class="price-bar">
-    <div class="pb-card gold" id="card-gold">
+    <div class="pb-card gold" id="card-gold" onclick="scrollToChart('gold')" style="cursor:pointer">
       <div class="alert-dot"></div>
       <div class="pb-name">金 (Au)</div>
       <div class="pb-price" id="price-gold">取得中...</div>
       <div class="pb-unit">円/g　<span style="font-size:8px;color:var(--muted)">前日比</span></div>
       <div class="pb-change nc" id="change-gold">—</div>
     </div>
-    <div class="pb-card plat" id="card-plat">
+    <div class="pb-card plat" id="card-plat" onclick="scrollToChart('plat')" style="cursor:pointer">
       <div class="alert-dot"></div>
       <div class="pb-name">白金 (Pt)</div>
       <div class="pb-price" id="price-plat">取得中...</div>
       <div class="pb-unit">円/g　<span style="font-size:8px;color:var(--muted)">前日比</span></div>
       <div class="pb-change nc" id="change-plat">—</div>
     </div>
-    <div class="pb-card silv" id="card-silv">
+    <div class="pb-card silv" id="card-silv" onclick="scrollToChart('silv')" style="cursor:pointer">
       <div class="alert-dot"></div>
       <div class="pb-name">銀 (Ag)</div>
       <div class="pb-price" id="price-silv">取得中...</div>
@@ -239,7 +239,7 @@ body{
     </div>
 
     <!-- 金チャート -->
-    <div class="chart-block">
+    <div class="chart-block" id="block-gold">
       <div class="chart-head">
         <div>
           <div class="chart-metal-label" style="color:var(--gold)">● 金 (Au)</div>
@@ -254,7 +254,7 @@ body{
     </div>
 
     <!-- プラチナチャート -->
-    <div class="chart-block">
+    <div class="chart-block" id="block-plat">
       <div class="chart-head">
         <div>
           <div class="chart-metal-label" style="color:var(--plat)">● 白金 (Pt)</div>
@@ -269,7 +269,7 @@ body{
     </div>
 
     <!-- 銀チャート -->
-    <div class="chart-block">
+    <div class="chart-block" id="block-silv">
       <div class="chart-head">
         <div>
           <div class="chart-metal-label" style="color:var(--silv)">● 銀 (Ag)</div>
@@ -397,6 +397,31 @@ function todayJST(){
 }
 
 /* ══════════════════════════════════════════════
+   日次履歴の記録（実データ蓄積）
+══════════════════════════════════════════════ */
+// その日の価格を記録する。同日なら最新値で上書き（1日1レコード）
+function recordDailyPrice(prices){
+  try{
+    const today = todayJST();
+    let hist = JSON.parse(localStorage.getItem('dailyHistory')||'[]');
+    const idx = hist.findIndex(h=>h.date===today);
+    const rec = {date:today, gold:prices.gold, plat:prices.plat, silv:prices.silv};
+    if(idx>=0) hist[idx]=rec; else hist.push(rec);
+    // 日付順に並べ、最大400日分のみ保持
+    hist.sort((a,b)=>a.date.localeCompare(b.date));
+    if(hist.length>400) hist = hist.slice(hist.length-400);
+    localStorage.setItem('dailyHistory', JSON.stringify(hist));
+    return hist;
+  }catch(e){ return []; }
+}
+
+// 保存済み日次履歴を取得
+function getDailyHistory(){
+  try{ return JSON.parse(localStorage.getItem('dailyHistory')||'[]'); }
+  catch(e){ return []; }
+}
+
+/* ══════════════════════════════════════════════
    前日比管理
 ══════════════════════════════════════════════ */
 // 前日比の基準価格をS.prevにセットする
@@ -482,22 +507,33 @@ const S = {
 ══════════════════════════════════════════════ */
 async function fetchPrices() {
   const ctrl = new AbortController();
-  const tid = setTimeout(()=>ctrl.abort(), 5000);
+  const tid = setTimeout(()=>ctrl.abort(), 8000);
   try {
-    // open.er-api は XAU/XAG/XPT を直接JPY換算できる
-    const [auRes, agRes, ptRes] = await Promise.all([
-      fetch('https://open.er-api.com/v6/latest/XAU', {signal:ctrl.signal}),
-      fetch('https://open.er-api.com/v6/latest/XAG', {signal:ctrl.signal}),
-      fetch('https://open.er-api.com/v6/latest/XPT', {signal:ctrl.signal}),
+    // gold-api.com: 認証不要・無料・無制限・CORS対応
+    // USD/troy-ounce で返るので JPY/g に変換する
+    const [auRes, agRes, ptRes, fxRes] = await Promise.all([
+      fetch('https://api.gold-api.com/price/XAU', {signal:ctrl.signal}),
+      fetch('https://api.gold-api.com/price/XAG', {signal:ctrl.signal}),
+      fetch('https://api.gold-api.com/price/XPT', {signal:ctrl.signal}),
+      fetch('https://api.frankfurter.app/latest?from=USD&to=JPY', {signal:ctrl.signal}),
     ]);
     clearTimeout(tid);
     const au = await auRes.json();
     const ag = await agRes.json();
     const pt = await ptRes.json();
-    const gold = au.rates?.JPY ? Math.round(au.rates.JPY / 31.1035) : 0;
-    const silv = ag.rates?.JPY ? Math.round(ag.rates.JPY / 31.1035) : 0;
-    const plat = pt.rates?.JPY ? Math.round(pt.rates.JPY / 31.1035) : 0;
-    if (gold > 10000) return {gold, silv, plat};
+    const fx = await fxRes.json();
+
+    const jpyRate = fx.rates?.JPY;
+    const auUsd = au.price;  // USD per troy ounce
+    const agUsd = ag.price;
+    const ptUsd = pt.price;
+
+    if (jpyRate && auUsd) {
+      const gold = Math.round((auUsd / 31.1035) * jpyRate);
+      const silv = agUsd ? Math.round((agUsd / 31.1035) * jpyRate) : 0;
+      const plat = ptUsd ? Math.round((ptUsd / 31.1035) * jpyRate) : 0;
+      if (gold > 5000) return {gold, silv, plat};
+    }
   } catch(e) { clearTimeout(tid); }
   return null;
 }
@@ -546,66 +582,70 @@ function updateAlertDots() {
 function buildHistory() {
   const now = new Date();
   const labels=[], gold=[], plat=[], silv=[];
+  const realHist = getDailyHistory(); // 実際に記録された日次データ [{date,gold,plat,silv}]
+  const realMap = {};
+  realHist.forEach(h => realMap[h.date] = h);
 
   if (S.rangeMths === 1) {
     // デイリー：直近30日（今日含む）
-    // 日付をシードにして乱数を固定（毎回同じ形になる）
+    // 実データがあればそれを使用。なければシードで補完（日付固定シードなので毎回同じ値）
     function dateHash(d){ return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate(); }
     function seededRand(seed, salt){
       const x = Math.sin(seed * 9301 + salt * 49297 + 233) * 100003;
-      return x - Math.floor(x); // 0〜1
+      return x - Math.floor(x);
     }
     const DAYS = 30;
     const baseG = SEED_GOLD[SEED_GOLD.length-1];
     const baseP = SEED_PLAT[SEED_PLAT.length-1];
     const baseS = SEED_SILV[SEED_SILV.length-1];
-    // 30日前から今日まで、デイリー変動を累積
     let gWalk=baseG, pWalk=baseP, sWalk=baseS;
-    const tmpG=[], tmpP=[], tmpS=[], tmpL=[];
+    const days=['日','月','火','水','木','金','土'];
+
     for(let i=DAYS-1; i>=0; i--){
       const d=new Date(now); d.setDate(d.getDate()-i);
-      const h=dateHash(d);
-      // 日次変動幅: 金±300, 白金±200, 銀±10
-      const dg=Math.round((seededRand(h,1)-.48)*300);
-      const dp=Math.round((seededRand(h,2)-.48)*200);
-      const ds=Math.round((seededRand(h,3)-.48)*10);
-      // ただし最終点（今日）は現在価格に強制上書きするので累積はラフでOK
-      gWalk+=dg; pWalk+=dp; sWalk+=ds;
-      // ラベル: 曜日付き（例 6/11水）
-      const days=['日','月','火','水','木','金','土'];
-      tmpL.push((d.getMonth()+1)+'/'+(d.getDate())+days[d.getDay()]);
-      tmpG.push(Math.max(gWalk,10000));
-      tmpP.push(Math.max(pWalk,3000));
-      tmpS.push(Math.max(sWalk,100));
-    }
-    // 最終点を現在価格に合わせてスケール補正
-    if(S.prices.gold){
-      const scaleG=S.prices.gold/tmpG[tmpG.length-1];
-      const scaleP=S.prices.plat/tmpP[tmpP.length-1];
-      const scaleS=S.prices.silv/tmpS[tmpS.length-1];
-      for(let i=0;i<tmpG.length;i++){
-        // 直近ほど補正強く（線形ブレンド）
-        const w=(i+1)/tmpG.length;
-        gold.push(Math.round(tmpG[i]*(1-w)+tmpG[i]*scaleG*w));
-        plat.push(Math.round(tmpP[i]*(1-w)+tmpP[i]*scaleP*w));
-        silv.push(Math.round(tmpS[i]*(1-w)+tmpS[i]*scaleS*w));
+      const dateStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      labels.push((d.getMonth()+1)+'/'+(d.getDate())+days[d.getDay()]);
+
+      if (realMap[dateStr]) {
+        // ★ 実データがある日はそれを使う（固定値・毎回同じ）
+        gold.push(realMap[dateStr].gold);
+        plat.push(realMap[dateStr].plat);
+        silv.push(realMap[dateStr].silv);
+        gWalk=realMap[dateStr].gold; pWalk=realMap[dateStr].plat; sWalk=realMap[dateStr].silv;
+      } else {
+        // データなし日は日付固定シードで補完（毎回同じ形になる・乱数ではない）
+        const h=dateHash(d);
+        const dg=Math.round((seededRand(h,1)-.48)*300);
+        const dp=Math.round((seededRand(h,2)-.48)*200);
+        const ds=Math.round((seededRand(h,3)-.48)*10);
+        gWalk+=dg; pWalk+=dp; sWalk+=ds;
+        gold.push(Math.max(gWalk,5000));
+        plat.push(Math.max(pWalk,3000));
+        silv.push(Math.max(sWalk,100));
       }
-    } else {
-      gold.push(...tmpG); plat.push(...tmpP); silv.push(...tmpS);
     }
-    labels.push(...tmpL);
   } else {
-    // 月次
+    // 月次（6M/1Y）：月の最終日に実データがあれば使用、なければシード
     for (let i=S.rangeMths-1; i>=0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
       labels.push((d.getMonth()+1)+'月\''+String(d.getFullYear()).slice(2));
       const si = Math.max(0, SEED_GOLD.length-1-i);
-      gold.push(SEED_GOLD[si]+Math.round((Math.random()-.5)*60));
-      plat.push(SEED_PLAT[si]+Math.round((Math.random()-.5)*50));
-      silv.push(SEED_SILV[si]+Math.round((Math.random()-.5)*4));
+      // 同月内の実データ平均があれば使う
+      const ym = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      const monthReal = realHist.filter(h=>h.date.startsWith(ym));
+      if (monthReal.length > 0) {
+        const avg = arr => Math.round(arr.reduce((a,b)=>a+b,0)/arr.length);
+        gold.push(avg(monthReal.map(h=>h.gold)));
+        plat.push(avg(monthReal.map(h=>h.plat)));
+        silv.push(avg(monthReal.map(h=>h.silv)));
+      } else {
+        gold.push(SEED_GOLD[si]);
+        plat.push(SEED_PLAT[si]);
+        silv.push(SEED_SILV[si]);
+      }
     }
   }
-  // 最新点を現在価格に固定
+  // 最新点（今日）は必ず現在のライブ価格に固定
   if (S.prices.gold) { gold[gold.length-1]=S.prices.gold; plat[plat.length-1]=S.prices.plat; silv[silv.length-1]=S.prices.silv; }
   S.history = {labels, gold, plat, silv};
 }
@@ -877,6 +917,30 @@ function restoreNotifUI(){
 /* ══════════════════════════════════════════════
    UI ユーティリティ
 ══════════════════════════════════════════════ */
+// 価格カードタップ→該当チャートまでスムーズスクロール（チャートタブに切り替えた上で）
+function scrollToChart(metal){
+  // チャートタブが非表示なら表示に切り替える
+  const chartPanel = document.getElementById('panel-chart');
+  if (!chartPanel.classList.contains('active')) {
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    chartPanel.classList.add('active');
+    document.querySelectorAll('.tab-btn')[0]?.classList.add('active'); // 1番目=チャートタブ
+  }
+  // 該当ブロックまでスクロール
+  setTimeout(()=>{
+    const block = document.getElementById('block-'+metal);
+    const scrollBody = document.getElementById('scrollBody');
+    if(block && scrollBody){
+      // scrollBody内での block の相対位置を計算
+      const blockRect = block.getBoundingClientRect();
+      const scrollRect = scrollBody.getBoundingClientRect();
+      const offset = blockRect.top - scrollRect.top + scrollBody.scrollTop - 12;
+      scrollBody.scrollTo({top: Math.max(0,offset), behavior:'smooth'});
+    }
+  }, 60);
+}
+
 function switchTab(name,btn){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -906,6 +970,7 @@ async function refreshData(){
     S.prices.gold=result.gold; S.prices.plat=result.plat; S.prices.silv=result.silv;
     S.isLive=true;
     try{localStorage.setItem('cachedPrices',JSON.stringify({...S.prices,ts:Date.now()}));}catch(e){}
+    recordDailyPrice(S.prices); // ★ 実データを今日の記録として保存
     const b=document.getElementById('dataBadge');
     if(b){b.className='data-badge live';b.textContent='● ライブ価格';}
     showToast('ライブ価格を取得しました');
