@@ -363,6 +363,7 @@ body{
       <strong>アラート設定</strong><br>「アラート」タブで上限・下限価格を保存。価格到達時に通知が届きます。
     </div>
     <div class="info-card" style="font-size:11px;text-align:center">貴金属価格トラッカー v3.0<br><span style="color:var(--muted)">© 2026</span></div>
+
   </div>
 </div>
 
@@ -506,35 +507,51 @@ const S = {
    API：価格取得（5秒タイムアウト）
 ══════════════════════════════════════════════ */
 async function fetchPrices() {
+  const API_KEY = 'goldapi-cdcb1ef33268f4d86f5e54b3cb73f0c8-io';
+  const HEADERS = {'x-access-token': API_KEY, 'Content-Type': 'application/json'};
   const ctrl = new AbortController();
-  const tid = setTimeout(()=>ctrl.abort(), 8000);
+  const tid = setTimeout(()=>ctrl.abort(), 10000);
   try {
-    // gold-api.com: 認証不要・無料・無制限・CORS対応
-    // USD/troy-ounce で返るので JPY/g に変換する
-    const [auRes, agRes, ptRes, fxRes] = await Promise.all([
-      fetch('https://api.gold-api.com/price/XAU', {signal:ctrl.signal}),
-      fetch('https://api.gold-api.com/price/XAG', {signal:ctrl.signal}),
-      fetch('https://api.gold-api.com/price/XPT', {signal:ctrl.signal}),
-      fetch('https://api.frankfurter.app/latest?from=USD&to=JPY', {signal:ctrl.signal}),
+    // goldapi.io: JPY建てで直接取得（price_gram_24k = JPY/g）
+    // prev_close_price も返るので前日比も正確
+    const [auRes, agRes, ptRes] = await Promise.all([
+      fetch('https://www.goldapi.io/api/XAU/JPY', {headers:HEADERS, signal:ctrl.signal}),
+      fetch('https://www.goldapi.io/api/XAG/JPY', {headers:HEADERS, signal:ctrl.signal}),
+      fetch('https://www.goldapi.io/api/XPT/JPY', {headers:HEADERS, signal:ctrl.signal}),
     ]);
     clearTimeout(tid);
-    const au = await auRes.json();
-    const ag = await agRes.json();
-    const pt = await ptRes.json();
-    const fx = await fxRes.json();
 
-    const jpyRate = fx.rates?.JPY;
-    const auUsd = au.price;  // USD per troy ounce
-    const agUsd = ag.price;
-    const ptUsd = pt.price;
-
-    if (jpyRate && auUsd) {
-      const gold = Math.round((auUsd / 31.1035) * jpyRate);
-      const silv = agUsd ? Math.round((agUsd / 31.1035) * jpyRate) : 0;
-      const plat = ptUsd ? Math.round((ptUsd / 31.1035) * jpyRate) : 0;
-      if (gold > 5000) return {gold, silv, plat};
+    if (!auRes.ok) {
+      console.warn('goldapi.io error:', auRes.status);
+      return null;
     }
-  } catch(e) { clearTimeout(tid); }
+
+    const au = await auRes.json();
+    const ag = agRes.ok ? await agRes.json() : null;
+    const pt = ptRes.ok ? await ptRes.json() : null;
+
+    // price_gram_24k = JPY/g (純金1gあたりの円価格)
+    const gold = au.price_gram_24k ? Math.round(au.price_gram_24k) : 0;
+    const silv = ag?.price_gram_24k ? Math.round(ag.price_gram_24k) : 0;
+    const plat = pt?.price_gram_24k ? Math.round(pt.price_gram_24k) : 0;
+
+    // 前日終値（prev_close_price = USD/troy-oz → JPY/g 変換）
+    // goldapi は prev_close を USD で返すので為替で変換
+    // ただし price_gram_24k の比率から逆算する方が簡単
+    const prevGold = au.prev_close_price && au.price
+      ? Math.round(gold * au.prev_close_price / au.price) : 0;
+    const prevSilv = ag?.prev_close_price && ag?.price
+      ? Math.round(silv * ag.prev_close_price / ag.price) : 0;
+    const prevPlat = pt?.prev_close_price && pt?.price
+      ? Math.round(plat * pt.prev_close_price / pt.price) : 0;
+
+    if (gold > 5000) {
+      return {gold, silv, plat, prevGold, prevSilv, prevPlat};
+    }
+  } catch(e) {
+    clearTimeout(tid);
+    console.warn('fetchPrices error:', e);
+  }
   return null;
 }
 
@@ -966,11 +983,15 @@ async function refreshData(){
   btn.classList.add('spinning');
   const result = await fetchPrices();
   if(result){
-    updatePrevOnFetch(result);
     S.prices.gold=result.gold; S.prices.plat=result.plat; S.prices.silv=result.silv;
+    if(result.prevGold){
+      S.prev.gold=result.prevGold;
+      S.prev.plat=result.prevPlat||S.prev.plat;
+      S.prev.silv=result.prevSilv||S.prev.silv;
+    } else { updatePrevOnFetch(result); }
     S.isLive=true;
     try{localStorage.setItem('cachedPrices',JSON.stringify({...S.prices,ts:Date.now()}));}catch(e){}
-    recordDailyPrice(S.prices); // ★ 実データを今日の記録として保存
+    recordDailyPrice(S.prices);
     const b=document.getElementById('dataBadge');
     if(b){b.className='data-badge live';b.textContent='● ライブ価格';}
     showToast('ライブ価格を取得しました');
@@ -1022,10 +1043,17 @@ function init(){
   // バックグラウンドでAPI取得
   fetchPrices().then(result=>{
     if(result){
-      updatePrevOnFetch(result);
       S.prices.gold=result.gold; S.prices.plat=result.plat; S.prices.silv=result.silv;
+      if(result.prevGold){
+        S.prev.gold=result.prevGold;
+        S.prev.plat=result.prevPlat||S.prev.plat;
+        S.prev.silv=result.prevSilv||S.prev.silv;
+      } else {
+        updatePrevOnFetch(result);
+      }
       S.isLive=true;
       try{localStorage.setItem('cachedPrices',JSON.stringify({...S.prices,ts:Date.now()}));}catch(e){}
+      recordDailyPrice(S.prices);
       const b=document.getElementById('dataBadge');
       if(b){b.className='data-badge live';b.textContent='● ライブ価格';}
       try{updateCards();}catch(e){}
@@ -1039,8 +1067,9 @@ function init(){
     fetchPrices().then(r=>{
       if(r){
         // 日付チェック：日付が変わっていれば現在価格を前日終値として保存
-        updatePrevOnFetch(r);
-        S.prices.gold=r.gold; S.prices.plat=r.plat; S.prices.silv=r.silv; S.isLive=true;
+        S.prices.gold=r.gold; S.prices.plat=r.plat; S.prices.silv=r.silv;
+        if(r.prevGold){S.prev.gold=r.prevGold; if(r.prevPlat)S.prev.plat=r.prevPlat; if(r.prevSilv)S.prev.silv=r.prevSilv;} else{updatePrevOnFetch(r);}
+        S.isLive=true;
         try{updateCards();}catch(e){} try{checkAlerts();}catch(e){}
       }
     }).catch(()=>{});
@@ -1075,8 +1104,9 @@ window.addEventListener('visibilitychange',()=>{
   if(!document.hidden){
     fetchPrices().then(r=>{
       if(r){
-        updatePrevOnFetch(r);
-        S.prices.gold=r.gold; S.prices.plat=r.plat; S.prices.silv=r.silv; S.isLive=true;
+        S.prices.gold=r.gold; S.prices.plat=r.plat; S.prices.silv=r.silv;
+        if(r.prevGold){S.prev.gold=r.prevGold; if(r.prevPlat)S.prev.plat=r.prevPlat; if(r.prevSilv)S.prev.silv=r.prevSilv;} else{updatePrevOnFetch(r);}
+        S.isLive=true;
         try{updateCards();}catch(e){} try{checkAlerts();}catch(e){}
       }
     }).catch(()=>{});
